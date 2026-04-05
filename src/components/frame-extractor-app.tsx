@@ -4,6 +4,7 @@ import JSZip from "jszip";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { SkeuSelect } from "@/components/skeu-select";
+import { isAllowedMediaProxyUrl } from "@/lib/media-hosts";
 import {
   buildStoryboard,
   buildStoryboardFromTimestamps,
@@ -24,8 +25,37 @@ type ExportFormat = "png" | "jpeg" | "webp";
 type QualityMode = "Fast" | "Balanced" | "Best";
 
 type SceneSample = {
-  score: number;
+  adaptiveRatio: number;
+  boundaryStrength: number;
+  brightness: number;
+  contentScore: number;
+  edgeEnergy: number;
+  localMotion: number;
+  sharpness: number;
   timestamp: number;
+  zScore: number;
+};
+
+type SceneDetectionConfig = {
+  adaptiveThreshold: number;
+  analysisWidth: number;
+  minContentFloor: number;
+  minSpacing: number;
+  sampleStep: number;
+  targetCount: number;
+  windowRadius: number;
+  zThreshold: number;
+};
+
+type FrameSignature = {
+  brightness: number;
+  edgeEnergy: number;
+  edges: Float32Array;
+  height: number;
+  histogram: Float32Array;
+  luma: Uint8Array;
+  sharpness: number;
+  width: number;
 };
 
 const TIMELINE_ZOOM_MIN = 1;
@@ -104,7 +134,17 @@ function createPreviewUrl(url: string | null) {
     return url;
   }
 
-  return `/api/media-proxy?url=${encodeURIComponent(url)}`;
+  try {
+    const parsedUrl = new URL(url);
+
+    if (isAllowedMediaProxyUrl(parsedUrl)) {
+      return `/api/media-proxy?url=${encodeURIComponent(url)}`;
+    }
+  } catch {
+    return url;
+  }
+
+  return url;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -281,99 +321,459 @@ async function generateStoryboardPreviewMap(
   return previews;
 }
 
-function scoreFrameDelta(currentPixels: Uint8ClampedArray, previousPixels: Uint8ClampedArray) {
-  let totalDelta = 0;
-
-  for (let index = 0; index < currentPixels.length; index += 4) {
-    totalDelta += Math.abs(currentPixels[index] - previousPixels[index]);
-    totalDelta += Math.abs(currentPixels[index + 1] - previousPixels[index + 1]);
-    totalDelta += Math.abs(currentPixels[index + 2] - previousPixels[index + 2]);
-  }
-
-  return totalDelta / ((currentPixels.length / 4) * 255 * 3);
-}
-
 function getSceneDetectionConfig(mode: StoryboardMode, qualityMode: QualityMode, dedupeEnabled: boolean) {
   const sampleStep =
-    qualityMode === "Best" ? 0.2 : qualityMode === "Balanced" ? 0.35 : 0.5;
-  const targetCount = mode === "Highlights" ? 6 : 12;
-  const minSpacing =
-    mode === "Highlights" ? (dedupeEnabled ? 1.8 : 1.4) : dedupeEnabled ? 0.7 : 0.45;
-  const sensitivityFloor = mode === "Highlights" ? 0.12 : 0.06;
+    qualityMode === "Best" ? 0.16 : qualityMode === "Balanced" ? 0.24 : 0.38;
+  const analysisWidth =
+    qualityMode === "Best" ? 128 : qualityMode === "Balanced" ? 96 : 72;
 
-  return { minSpacing, sampleStep, sensitivityFloor, targetCount };
+  if (mode === "Highlights") {
+    return {
+      adaptiveThreshold: 1.55,
+      analysisWidth,
+      minContentFloor: 0.09,
+      minSpacing: dedupeEnabled ? 1.9 : 1.45,
+      sampleStep,
+      targetCount: 6,
+      windowRadius: qualityMode === "Best" ? 3 : 2,
+      zThreshold: 1.15,
+    };
+  }
+
+  return {
+    adaptiveThreshold: 1.28,
+    analysisWidth,
+    minContentFloor: 0.05,
+    minSpacing: dedupeEnabled ? 0.85 : 0.58,
+    sampleStep,
+    targetCount: 10,
+    windowRadius: qualityMode === "Best" ? 3 : 2,
+    zThreshold: 0.7,
+  };
 }
 
-function pickSceneTimestamps(
-  samples: SceneSample[],
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function percentile(values: number[], ratio: number) {
+  if (!values.length) {
+    return 0;
+  }
+
+  const sorted = [...values].sort((left, right) => left - right);
+  const index = clamp(Math.round((sorted.length - 1) * ratio), 0, sorted.length - 1);
+  return sorted[index];
+}
+
+function mean(values: number[]) {
+  if (!values.length) {
+    return 0;
+  }
+
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function computeBhattacharyyaDistance(current: Float32Array, previous: Float32Array) {
+  let coefficient = 0;
+
+  for (let index = 0; index < current.length; index += 1) {
+    coefficient += Math.sqrt(current[index] * previous[index]);
+  }
+
+  return Math.sqrt(Math.max(0, 1 - coefficient));
+}
+
+function computeGlobalSsimDissimilarity(current: Uint8Array, previous: Uint8Array) {
+  const length = current.length;
+
+  if (!length || length !== previous.length) {
+    return 0;
+  }
+
+  let sumCurrent = 0;
+  let sumPrevious = 0;
+
+  for (let index = 0; index < length; index += 1) {
+    sumCurrent += current[index];
+    sumPrevious += previous[index];
+  }
+
+  const meanCurrent = sumCurrent / length;
+  const meanPrevious = sumPrevious / length;
+  let varianceCurrent = 0;
+  let variancePrevious = 0;
+  let covariance = 0;
+
+  for (let index = 0; index < length; index += 1) {
+    const deltaCurrent = current[index] - meanCurrent;
+    const deltaPrevious = previous[index] - meanPrevious;
+    varianceCurrent += deltaCurrent * deltaCurrent;
+    variancePrevious += deltaPrevious * deltaPrevious;
+    covariance += deltaCurrent * deltaPrevious;
+  }
+
+  varianceCurrent /= length;
+  variancePrevious /= length;
+  covariance /= length;
+
+  const c1 = (0.01 * 255) ** 2;
+  const c2 = (0.03 * 255) ** 2;
+  const numerator =
+    (2 * meanCurrent * meanPrevious + c1) * (2 * covariance + c2);
+  const denominator =
+    (meanCurrent * meanCurrent + meanPrevious * meanPrevious + c1) *
+    (varianceCurrent + variancePrevious + c2);
+
+  if (!denominator) {
+    return 0;
+  }
+
+  const ssim = clamp(numerator / denominator, -1, 1);
+  return clamp((1 - ssim) / 2, 0, 1);
+}
+
+function computeDHashDistance(current: FrameSignature, previous: FrameSignature) {
+  if (!current.luma.length || current.luma.length !== previous.luma.length) {
+    return 0;
+  }
+
+  const rows = 8;
+  const cols = 8;
+  let mismatches = 0;
+
+  for (let row = 0; row < rows; row += 1) {
+    const y = Math.min(current.height - 1, Math.floor(((row + 0.5) / rows) * current.height));
+
+    for (let col = 0; col < cols; col += 1) {
+      const x = Math.min(current.width - 2, Math.floor((col / (cols + 1)) * (current.width - 1)));
+      const index = y * current.width + x;
+      const currentBit = current.luma[index] > current.luma[index + 1];
+      const previousBit = previous.luma[index] > previous.luma[index + 1];
+
+      if (currentBit !== previousBit) {
+        mismatches += 1;
+      }
+    }
+  }
+
+  return mismatches / (rows * cols);
+}
+
+function buildFrameSignature(
+  imageData: Uint8ClampedArray,
+  width: number,
+  height: number,
+): FrameSignature {
+  const pixelCount = width * height;
+  const luma = new Uint8Array(pixelCount);
+  const edges = new Float32Array(pixelCount);
+  const histogramBins = 32;
+  const histogram = new Float32Array(histogramBins);
+  let brightnessSum = 0;
+
+  for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += 1) {
+    const offset = pixelIndex * 4;
+    const red = imageData[offset];
+    const green = imageData[offset + 1];
+    const blue = imageData[offset + 2];
+    const luminance = Math.round(red * 0.299 + green * 0.587 + blue * 0.114);
+
+    luma[pixelIndex] = luminance;
+    histogram[Math.min(histogramBins - 1, Math.floor((luminance / 256) * histogramBins))] += 1;
+    brightnessSum += luminance;
+  }
+
+  for (let index = 0; index < histogram.length; index += 1) {
+    histogram[index] /= pixelCount;
+  }
+
+  let edgeSum = 0;
+  let laplacianSum = 0;
+  let laplacianSquaredSum = 0;
+  const sobelNormalizer = 1443;
+
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
+      const index = y * width + x;
+      const topLeft = luma[index - width - 1];
+      const top = luma[index - width];
+      const topRight = luma[index - width + 1];
+      const left = luma[index - 1];
+      const center = luma[index];
+      const right = luma[index + 1];
+      const bottomLeft = luma[index + width - 1];
+      const bottom = luma[index + width];
+      const bottomRight = luma[index + width + 1];
+
+      const gradientX =
+        -topLeft - 2 * left - bottomLeft + topRight + 2 * right + bottomRight;
+      const gradientY =
+        -topLeft - 2 * top - topRight + bottomLeft + 2 * bottom + bottomRight;
+      const magnitude = clamp(
+        Math.sqrt(gradientX * gradientX + gradientY * gradientY) / sobelNormalizer,
+        0,
+        1,
+      );
+      edges[index] = magnitude;
+      edgeSum += magnitude;
+
+      const laplacian = 4 * center - left - right - top - bottom;
+      laplacianSum += laplacian;
+      laplacianSquaredSum += laplacian * laplacian;
+    }
+  }
+
+  const innerPixelCount = Math.max(1, (width - 2) * (height - 2));
+  const laplacianMean = laplacianSum / innerPixelCount;
+
+  return {
+    brightness: brightnessSum / pixelCount / 255,
+    edgeEnergy: edgeSum / innerPixelCount,
+    edges,
+    height,
+    histogram,
+    luma,
+    sharpness:
+      laplacianSquaredSum / innerPixelCount - laplacianMean * laplacianMean,
+    width,
+  };
+}
+
+function computeContentScore(current: FrameSignature, previous: FrameSignature) {
+  let lumaDelta = 0;
+  let edgeDelta = 0;
+
+  for (let index = 0; index < current.luma.length; index += 1) {
+    lumaDelta += Math.abs(current.luma[index] - previous.luma[index]);
+    edgeDelta += Math.abs(current.edges[index] - previous.edges[index]);
+  }
+
+  lumaDelta /= current.luma.length * 255;
+  edgeDelta /= current.edges.length;
+
+  const ssimDissimilarity = computeGlobalSsimDissimilarity(current.luma, previous.luma);
+  const histogramDistance = computeBhattacharyyaDistance(current.histogram, previous.histogram);
+  const hashDistance = computeDHashDistance(current, previous);
+  let score =
+    lumaDelta * 0.24 +
+    edgeDelta * 0.3 +
+    ssimDissimilarity * 0.24 +
+    histogramDistance * 0.14 +
+    hashDistance * 0.08;
+
+  const brightnessSwing = Math.abs(current.brightness - previous.brightness);
+
+  if (brightnessSwing > 0.12 && edgeDelta < 0.035 && ssimDissimilarity < 0.05) {
+    score *= 0.65;
+  }
+
+  return clamp(score, 0, 1);
+}
+
+function annotateAdaptiveSceneSamples(
+  rawSamples: Omit<SceneSample, "adaptiveRatio" | "boundaryStrength" | "localMotion" | "zScore">[],
+  config: SceneDetectionConfig,
+) {
+  if (!rawSamples.length) {
+    return [];
+  }
+
+  const scores = rawSamples.map((sample) => sample.contentScore);
+  const globalMean = mean(scores);
+  const absoluteFloor = Math.max(
+    config.minContentFloor,
+    percentile(scores, config.targetCount <= 6 ? 0.72 : 0.6) * 0.88,
+  );
+
+  return rawSamples.map((sample, index) => {
+    const left = Math.max(0, index - config.windowRadius);
+    const right = Math.min(rawSamples.length - 1, index + config.windowRadius);
+    const neighbors: number[] = [];
+
+    for (let cursor = left; cursor <= right; cursor += 1) {
+      if (cursor !== index) {
+        neighbors.push(rawSamples[cursor].contentScore);
+      }
+    }
+
+    const localMean = neighbors.length ? mean(neighbors) : globalMean;
+    const localVariance = neighbors.length
+      ? neighbors.reduce((sum, value) => sum + (value - localMean) ** 2, 0) / neighbors.length
+      : 0;
+    const localDeviation = Math.sqrt(localVariance);
+    const adaptiveRatio = sample.contentScore / Math.max(localMean, 0.0001);
+    const zScore = (sample.contentScore - localMean) / Math.max(localDeviation, 0.0001);
+    const localMotion = mean(
+      [
+        rawSamples[index - 1]?.contentScore,
+        sample.contentScore,
+        rawSamples[index + 1]?.contentScore,
+      ].filter((value): value is number => typeof value === "number"),
+    );
+    const strength =
+      sample.contentScore * 0.5 +
+      clamp((adaptiveRatio - config.adaptiveThreshold) / config.adaptiveThreshold, 0, 2) * 0.3 +
+      clamp(zScore / 2.5, 0, 2) * 0.2;
+
+    return {
+      ...sample,
+      adaptiveRatio,
+      boundaryStrength:
+        sample.contentScore >= absoluteFloor &&
+        (adaptiveRatio >= config.adaptiveThreshold || zScore >= config.zThreshold)
+          ? strength
+          : 0,
+      localMotion,
+      zScore,
+    };
+  });
+}
+
+function pickBoundaryCandidates(samples: SceneSample[], config: SceneDetectionConfig) {
+  const peaks = samples.filter((sample, index) => {
+    const previous = samples[index - 1];
+    const next = samples[index + 1];
+
+    return (
+      sample.boundaryStrength > 0 &&
+      (!previous || sample.contentScore >= previous.contentScore) &&
+      (!next || sample.contentScore >= next.contentScore)
+    );
+  });
+
+  const selected: SceneSample[] = [];
+
+  for (const candidate of [...peaks].sort((left, right) => right.boundaryStrength - left.boundaryStrength)) {
+    if (
+      selected.every(
+        (sample) => Math.abs(sample.timestamp - candidate.timestamp) >= config.minSpacing,
+      )
+    ) {
+      selected.push(candidate);
+    }
+
+    if (selected.length >= config.targetCount - 1) {
+      break;
+    }
+  }
+
+  return selected.sort((left, right) => left.timestamp - right.timestamp);
+}
+
+function fillBoundaryCoverage(
+  boundaries: number[],
   duration: number,
-  targetCount: number,
+  desiredBoundaries: number,
   minSpacing: number,
-  sensitivityFloor: number,
+) {
+  const next = [...boundaries].sort((left, right) => left - right);
+
+  while (next.length < desiredBoundaries) {
+    const anchors = [0, ...next, duration];
+    let longestIndex = -1;
+    let longestLength = 0;
+
+    for (let index = 0; index < anchors.length - 1; index += 1) {
+      const length = anchors[index + 1] - anchors[index];
+
+      if (length > longestLength) {
+        longestLength = length;
+        longestIndex = index;
+      }
+    }
+
+    if (longestIndex === -1 || longestLength < Math.max(minSpacing * 1.7, 0.8)) {
+      break;
+    }
+
+    const midpoint = Number(
+      ((anchors[longestIndex] + anchors[longestIndex + 1]) / 2).toFixed(3),
+    );
+
+    if (next.every((timestamp) => Math.abs(timestamp - midpoint) >= minSpacing * 0.75)) {
+      next.push(midpoint);
+      next.sort((left, right) => left - right);
+      continue;
+    }
+
+    break;
+  }
+
+  return next;
+}
+
+function pickRepresentativeTimestamps(
+  samples: SceneSample[],
+  boundaries: number[],
+  duration: number,
+  config: SceneDetectionConfig,
 ) {
   if (!samples.length) {
     return [];
   }
 
-  const scores = samples.map((sample) => sample.score);
-  const mean = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-  const variance =
-    scores.reduce((sum, score) => sum + (score - mean) ** 2, 0) / scores.length;
-  const standardDeviation = Math.sqrt(variance);
-  const isHighlightsMode = targetCount <= 6;
-  const threshold = Math.max(
-    sensitivityFloor,
-    mean + standardDeviation * (isHighlightsMode ? 1.05 : 0.55),
+  const segments = [0, ...boundaries, duration];
+  const maxSharpness = Math.max(...samples.map((sample) => sample.sharpness), 1);
+  const maxEdgeEnergy = Math.max(...samples.map((sample) => sample.edgeEnergy), 1);
+  const motionScale = Math.max(
+    percentile(samples.map((sample) => sample.localMotion), 0.8),
+    0.0001,
   );
+  const timestamps: number[] = [];
 
-  const localPeaks = samples.filter((sample, index) => {
-    const previous = samples[index - 1];
-    const next = samples[index + 1];
-
-    return (
-      sample.score >= threshold &&
-      (!previous || sample.score >= previous.score) &&
-      (!next || sample.score >= next.score)
+  for (let index = 0; index < segments.length - 1; index += 1) {
+    const start = segments[index];
+    const end = segments[index + 1];
+    const segmentLength = Math.max(end - start, config.sampleStep);
+    const guard = Math.min(segmentLength * 0.18, config.sampleStep * 1.5);
+    const center = (start + end) / 2;
+    const candidates = samples.filter(
+      (sample) => sample.timestamp >= start + guard && sample.timestamp <= end - guard,
     );
-  });
+    const pool = candidates.length
+      ? candidates
+      : samples.filter((sample) => sample.timestamp >= start && sample.timestamp <= end);
 
-  const rankedCandidates = [...localPeaks, ...samples]
-    .sort((left, right) => right.score - left.score)
-    .filter(
-      (sample, index, collection) =>
-        collection.findIndex((candidate) => candidate.timestamp === sample.timestamp) === index,
-    );
-
-  const picked: number[] = [Math.min(0.15, Math.max(0, duration - 0.1))];
-
-  for (const candidate of rankedCandidates) {
-    if (picked.length >= targetCount) {
-      break;
+    if (!pool.length) {
+      timestamps.push(Number(clamp(center, 0.1, Math.max(0.1, duration - 0.1)).toFixed(3)));
+      continue;
     }
 
-    if (picked.every((timestamp) => Math.abs(timestamp - candidate.timestamp) >= minSpacing)) {
-      picked.push(candidate.timestamp);
-    }
-  }
+    let best = pool[0];
+    let bestScore = -Infinity;
 
-  if (picked.length < targetCount) {
-    const fallback = buildStoryboard(duration, isHighlightsMode ? "Highlights" : "Scenes")
-      .map((frame) => frame.timestamp)
-      .filter((timestamp) => picked.every((current) => Math.abs(current - timestamp) >= minSpacing / 2));
+    for (const candidate of pool) {
+      const clarity = Math.sqrt(candidate.sharpness / maxSharpness);
+      const structure = candidate.edgeEnergy / maxEdgeEnergy;
+      const stability = 1 - clamp(candidate.localMotion / motionScale, 0, 1);
+      const centerBias =
+        1 -
+        clamp(
+          Math.abs(candidate.timestamp - center) / (segmentLength / 2 + config.sampleStep),
+          0,
+          1,
+        );
+      const exposureBalance = 1 - Math.abs(candidate.brightness - 0.5) * 1.6;
+      const score =
+        clarity * 0.42 +
+        structure * 0.2 +
+        stability * 0.23 +
+        centerBias * 0.1 +
+        exposureBalance * 0.05;
 
-    for (const timestamp of fallback) {
-      if (picked.length >= targetCount) {
-        break;
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
       }
-
-      picked.push(timestamp);
     }
+
+    timestamps.push(
+      Number(clamp(best.timestamp, 0.1, Math.max(0.1, duration - 0.1)).toFixed(3)),
+    );
   }
 
-  return picked
-    .sort((left, right) => left - right)
-    .slice(0, targetCount)
-    .map((timestamp) => Number(Math.min(timestamp, Math.max(0.1, duration - 0.1)).toFixed(3)));
+  return timestamps;
 }
 
 async function detectStoryboardFramesFromVideo(
@@ -387,7 +787,7 @@ async function detectStoryboardFramesFromVideo(
     return buildStoryboard(duration, mode);
   }
 
-  const { minSpacing, sampleStep, sensitivityFloor, targetCount } = getSceneDetectionConfig(
+  const config = getSceneDetectionConfig(
     mode,
     qualityMode,
     dedupeEnabled,
@@ -403,8 +803,11 @@ async function detectStoryboardFramesFromVideo(
   await waitForVideoReady(video);
 
   const canvas = document.createElement("canvas");
-  const width = 64;
-  const height = Math.max(36, Math.round(width / ((video.videoWidth || 16) / (video.videoHeight || 9))));
+  const width = config.analysisWidth;
+  const height = Math.max(
+    40,
+    Math.round(width / ((video.videoWidth || 16) / (video.videoHeight || 9))),
+  );
   canvas.width = width;
   canvas.height = height;
 
@@ -414,40 +817,53 @@ async function detectStoryboardFramesFromVideo(
     throw new Error("Canvas export is unavailable for scene detection.");
   }
 
-  let previousPixels: Uint8ClampedArray | null = null;
-  const samples: SceneSample[] = [];
-  const maxTimestamp = Math.max(sampleStep, duration - 0.1);
+  let previousSignature: FrameSignature | null = null;
+  const rawSamples: Omit<
+    SceneSample,
+    "adaptiveRatio" | "boundaryStrength" | "localMotion" | "zScore"
+  >[] = [];
+  const maxTimestamp = Math.max(config.sampleStep, duration - 0.1);
 
   for (
     let timestamp = Math.min(0.15, maxTimestamp);
     timestamp <= maxTimestamp;
-    timestamp += sampleStep
+    timestamp += config.sampleStep
   ) {
     await waitForVideoSeek(video, Number(timestamp.toFixed(3)));
     context.drawImage(video, 0, 0, width, height);
     const currentPixels = context.getImageData(0, 0, width, height).data;
+    const currentSignature = buildFrameSignature(currentPixels, width, height);
 
-    if (previousPixels) {
-      samples.push({
-        score: scoreFrameDelta(currentPixels, previousPixels),
+    if (previousSignature) {
+      rawSamples.push({
+        brightness: currentSignature.brightness,
+        contentScore: computeContentScore(currentSignature, previousSignature),
+        edgeEnergy: currentSignature.edgeEnergy,
+        sharpness: currentSignature.sharpness,
         timestamp: Number(timestamp.toFixed(3)),
       });
     }
 
-    previousPixels = new Uint8ClampedArray(currentPixels);
+    previousSignature = currentSignature;
   }
 
   video.pause();
   video.removeAttribute("src");
   video.load();
 
-  const timestamps = pickSceneTimestamps(
-    samples,
-    duration,
-    targetCount,
-    minSpacing,
-    sensitivityFloor,
+  const samples = annotateAdaptiveSceneSamples(rawSamples, config);
+  const pickedBoundaries = pickBoundaryCandidates(samples, config).map(
+    (sample) => sample.timestamp,
   );
+  const boundaries = fillBoundaryCoverage(
+    pickedBoundaries,
+    duration,
+    Math.max(0, config.targetCount - 1),
+    config.minSpacing,
+  );
+  const timestamps = pickRepresentativeTimestamps(samples, boundaries, duration, config)
+    .sort((left, right) => left - right)
+    .slice(0, config.targetCount);
 
   if (!timestamps.length) {
     return buildStoryboard(duration, mode);

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { isAllowedMediaProxyUrl } from "@/lib/media-hosts";
+
 function getUpstreamUrl(request: Request) {
   const { searchParams } = new URL(request.url);
   const rawUrl = searchParams.get("url");
@@ -11,7 +13,7 @@ function getUpstreamUrl(request: Request) {
   try {
     const upstreamUrl = new URL(rawUrl);
 
-    if (!["http:", "https:"].includes(upstreamUrl.protocol)) {
+    if (!isAllowedMediaProxyUrl(upstreamUrl)) {
       return null;
     }
 
@@ -25,7 +27,10 @@ async function proxyRequest(request: Request, method: "GET" | "HEAD") {
   const upstreamUrl = getUpstreamUrl(request);
 
   if (!upstreamUrl) {
-    return NextResponse.json({ error: "Enter a valid upstream media URL." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Only approved X/Twitter media hosts can be proxied here." },
+      { status: 403 },
+    );
   }
 
   const upstreamHeaders = new Headers();

@@ -100,9 +100,9 @@ select {
   border-radius: 2.25rem;
   border: none;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, transparent 28%),
-    linear-gradient(145deg, rgba(255, 255, 255, 0.18) 0%, transparent 35%),
-    linear-gradient(165deg, #f0d8ff 0%, #d0e4ff 28%, #a8caf8 58%, #88b8f0 100%);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0.04) 22%, transparent 40%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.03) 28%, transparent 48%),
+    linear-gradient(165deg, #f0d8ff 0%, #dce8ff 18%, #d0e4ff 34%, #a8caf8 58%, #88b8f0 82%, #6ea0e8 100%);
   box-shadow:
     0 0 0 1px rgba(255, 255, 255, 0.45),
     0 0 0 2px rgba(5, 10, 36, 0.65),
@@ -124,11 +124,17 @@ select {
   content: "";
   position: absolute;
   top: 0;
-  left: 8%;
-  right: 8%;
-  height: 55%;
-  border-radius: 0 0 50% 50%;
-  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.32), transparent 62%);
+  left: 4%;
+  right: 4%;
+  height: 52%;
+  border-radius: 0;
+  background: radial-gradient(
+    ellipse 92% 75% at 50% -8%,
+    rgba(255, 255, 255, 0.26) 0%,
+    rgba(255, 255, 255, 0.08) 42%,
+    rgba(255, 255, 255, 0.02) 62%,
+    transparent 78%
+  );
   pointer-events: none;
   z-index: 0;
 }
@@ -155,21 +161,49 @@ select {
   background:
     repeating-linear-gradient(
       -80deg,
-      transparent 0 6px,
-      rgba(255, 255, 255, 0.03) 6px 7px
+      transparent 0 14px,
+      rgba(255, 255, 255, 0.016) 14px 15px
     ),
-    radial-gradient(ellipse 85% 120% at 50% -25%, rgba(255, 255, 255, 0.72), transparent 46%),
-    radial-gradient(ellipse 50% 80% at 100% 50%, rgba(255, 200, 240, 0.35), transparent 55%),
-    linear-gradient(180deg, #ffc0e4 0%, var(--skeu-pink-mid) 26%, var(--skeu-pink-deep) 68%, #881850 100%);
+    radial-gradient(
+      ellipse 95% 130% at 50% -22%,
+      rgba(255, 255, 255, 0.42) 0%,
+      rgba(255, 255, 255, 0.14) 36%,
+      rgba(255, 220, 240, 0.06) 52%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 55% 95% at 96% 40%,
+      rgba(255, 215, 238, 0.2) 0%,
+      rgba(255, 180, 215, 0.05) 45%,
+      transparent 62%
+    ),
+    linear-gradient(
+      180deg,
+      #ffd4ec 0%,
+      #ffbddf 14%,
+      #ffa8d4 28%,
+      var(--skeu-pink-mid) 44%,
+      #e9569a 58%,
+      #d44882 72%,
+      var(--skeu-pink-deep) 84%,
+      #9c3060 93%,
+      #7a2850 100%
+    );
   border-bottom: none;
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.55) inset,
-    0 4px 8px rgba(255, 160, 210, 0.25) inset,
-    0 -3px 8px rgba(0, 0, 0, 0.28) inset,
-    0 4px 0 rgba(5, 10, 24, 0.35),
+    0 4px 8px rgba(255, 160, 210, 0.22) inset,
+    0 -1px 0 rgba(255, 210, 235, 0.35) inset,
+    0 -10px 24px rgba(55, 20, 45, 0.14) inset,
+    0 2px 0 rgba(32, 22, 48, 0.22),
     0 12px 26px rgba(255, 95, 150, 0.09),
     0 6px 48px rgba(240, 170, 200, 0.06),
-    0 3px 12px rgba(60, 20, 45, 0.16);
+    0 3px 12px rgba(60, 20, 45, 0.1);
+  z-index: 1;
+}
+
+.skeu-titlebar > * {
+  position: relative;
   z-index: 1;
 }
 
@@ -179,22 +213,39 @@ select {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.35) 15%, rgba(0, 0, 0, 0.35) 85%, transparent);
+  height: 14px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    transparent 22%,
+    rgba(140, 40, 90, 0.12) 55%,
+    rgba(100, 55, 95, 0.14) 78%,
+    rgba(180, 190, 230, 0.12) 100%
+  );
   pointer-events: none;
-  opacity: 0.65;
+  opacity: 0.85;
+  z-index: 0;
 }
 
 .skeu-titlebar::after {
   content: "";
   position: absolute;
-  top: 0;
-  left: 5%;
-  right: 5%;
-  height: 55%;
-  border-radius: 0 0 50% 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), transparent);
+  top: -40%;
+  left: 0;
+  right: 0;
+  height: 95%;
+  border-radius: 0;
   pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    ellipse 88% 58% at 50% 0%,
+    rgba(255, 255, 255, 0.26) 0%,
+    rgba(255, 255, 255, 0.09) 38%,
+    rgba(255, 245, 252, 0.03) 58%,
+    transparent 76%
+  );
+  mix-blend-mode: soft-light;
+  opacity: 0.75;
 }
 
 .skeu-titlebar__text {
