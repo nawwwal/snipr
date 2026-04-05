@@ -1426,9 +1426,12 @@ export function FrameExtractorApp() {
                     snipr
                   </span>
                   <span className="mx-1.5 opacity-90 sm:mx-2" aria-hidden>
-                    —
+                    |
                   </span>
-                  <span className="font-normal tracking-normal">rip the video</span>
+                  <span className="font-normal tracking-normal">rip the video.</span>{" "}
+                  <span className="font-normal tracking-normal text-[#ffe082] drop-shadow-[0_1px_0_rgba(90,40,0,0.35)]">
+                    keep the gold.
+                  </span>
                 </p>
               </div>
             </div>

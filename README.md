@@ -1,6 +1,10 @@
 # snipr
 
-**Rip the video.** (Yes, that is the whole pitch. Marketing said we could not afford a second line.)
+**Rip the video. Keep the gold.** (The second line is non negotiable if you like the yellow bits on the pink chrome bar.)
+
+## Ship it on Vercel
+
+This repo is a stock Next.js App Router app: `npm run build` is what you need. Import the GitHub repo in Vercel, leave defaults, add no env vars unless you fork in secrets later. API routes (`/api/resolve-source`, `/api/media-proxy`) run as serverless fetches. Very long proxy downloads or abusive open proxy traffic are the usual cloud caveats, not a missing config flag.
 
 This is a Next.js app that looks like it time traveled from 2004, then robbed a candy factory, then decided to help you steal frames from video. Paste a post URL. Get a storyboard. Export a ZIP. Feel like a digital raccoon with a master’s degree.
 

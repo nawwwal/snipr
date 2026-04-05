@@ -17,9 +17,9 @@ const vt323 = VT323({
 });
 
 export const metadata: Metadata = {
-  title: "snipr | rip the video",
+  title: "snipr | rip the video. keep the gold.",
   description:
-    "Resolve posts, storyboard moments, and export frames from video. Rip the video.",
+    "Rip the video. Keep the gold. Storyboard posts, export frames, glossy 2000s chaos.",
 };
 
 export const viewport: Viewport = {
