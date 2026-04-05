@@ -2,6 +2,7 @@
 
 import JSZip from "jszip";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { SkeuSelect } from "@/components/skeu-select";
 import { isAllowedMediaProxyUrl } from "@/lib/media-hosts";
@@ -1001,6 +1002,8 @@ export function FrameExtractorApp() {
   const [timelineZoom, setTimelineZoom] = useState(TIMELINE_ZOOM_MIN);
 
   const isAutoStoryboardingRef = useRef(false);
+  /** Prevents duplicate full-video scan right after openSource (effect also watches URL). */
+  const skipNextStoryboardEffectRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const timelineScrollRef = useRef<HTMLDivElement>(null);
   const timelineTrackRef = useRef<HTMLDivElement>(null);
@@ -1073,40 +1076,61 @@ export function FrameExtractorApp() {
     );
   }
 
-  useEffect(() => {
-    let cancelled = false;
+  const runStoryboardDetection = useCallback(
+    async (overrides?: { url?: string | null; duration?: number }) => {
+      const url = overrides?.url !== undefined ? overrides.url : activeVideoUrl;
+      const dur =
+        overrides?.duration !== undefined ? overrides.duration : Number(duration) || 0;
 
-    async function generateStoryboard() {
-      if (!activeVideoUrl || !duration) {
-        setStoryboardFrames(buildStoryboard(duration || 12, storyboardMode));
+      if (!url || !(dur > 0)) {
+        setStoryboardFrames(buildStoryboard(dur || 12, storyboardMode));
         return;
       }
 
+      if (isAutoStoryboardingRef.current) {
+        return;
+      }
+
+      isAutoStoryboardingRef.current = true;
+      setIsAutoStoryboarding(true);
+      setStoryboardFrames([]);
+      setStoryboardPreviewUrls({});
+      setStatusNote("Analyzing the whole video and rebuilding the storyboard...");
+
       try {
-        const nextFrames = await detectStoryboardFramesFromVideo(
-          activeVideoUrl,
-          duration,
+        const slots = await detectStoryboardFramesFromVideo(
+          url,
+          dur,
           storyboardMode,
           qualityMode,
           dedupeEnabled,
         );
 
-        if (!cancelled) {
-          setStoryboardFrames(nextFrames);
-        }
+        setStoryboardFrames(slots);
+        setStatusNote(
+          slots.length === 0
+            ? "No storyboard moments were detected."
+            : `Storyboard rebuilt with ${slots.length} frames from the full video.`,
+        );
       } catch {
-        if (!cancelled) {
-          setStoryboardFrames(buildStoryboard(duration, storyboardMode));
-        }
+        const fallback = buildStoryboard(dur, storyboardMode);
+        setStoryboardFrames(fallback);
+        setStatusNote(`Storyboard rebuilt with ${fallback.length} fallback frames.`);
+      } finally {
+        isAutoStoryboardingRef.current = false;
+        setIsAutoStoryboarding(false);
       }
+    },
+    [activeVideoUrl, duration, storyboardMode, qualityMode, dedupeEnabled],
+  );
+
+  useEffect(() => {
+    if (skipNextStoryboardEffectRef.current) {
+      skipNextStoryboardEffectRef.current = false;
+      return;
     }
-
-    void generateStoryboard();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeVideoUrl, dedupeEnabled, duration, qualityMode, storyboardMode]);
+    void runStoryboardDetection();
+  }, [runStoryboardDetection]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1383,38 +1407,7 @@ export function FrameExtractorApp() {
       setStatusNote("Load a video first.");
       return;
     }
-
-    if (isAutoStoryboardingRef.current) {
-      return;
-    }
-
-    isAutoStoryboardingRef.current = true;
-    setIsAutoStoryboarding(true);
-    setStatusNote("Analyzing the whole video and rebuilding the storyboard...");
-
-    try {
-      const slots = await detectStoryboardFramesFromVideo(
-        activeVideoUrl,
-        duration,
-        storyboardMode,
-        qualityMode,
-        dedupeEnabled,
-      );
-
-      setStoryboardFrames(slots);
-      setStatusNote(
-        slots.length === 0
-          ? "No storyboard moments were detected."
-          : `Storyboard rebuilt with ${slots.length} frames from the full video.`,
-      );
-    } catch {
-      const fallback = buildStoryboard(duration, storyboardMode);
-      setStoryboardFrames(fallback);
-      setStatusNote(`Storyboard rebuilt with ${fallback.length} fallback frames.`);
-    } finally {
-      isAutoStoryboardingRef.current = false;
-      setIsAutoStoryboarding(false);
-    }
+    await runStoryboardDetection();
   }
 
   async function exportSelection() {
@@ -1604,14 +1597,25 @@ export function FrameExtractorApp() {
         throw new Error(payload.error || "Unable to resolve that source.");
       }
 
-      setSession(payload);
-      setDuration(payload.duration);
-      setCurrentTime(Math.min(12.345, payload.duration));
-      setSelectedVariant(payload.variants[0]?.id ?? "");
-      setIsPlaying(false);
-      setTimelineZoom(TIMELINE_ZOOM_MIN);
+      const nextVariant = payload.variants[0] ?? null;
+      const previewUrl = createPreviewUrl(nextVariant?.url ?? payload.videoUrl ?? null);
+
+      flushSync(() => {
+        setSession(payload);
+        setDuration(payload.duration);
+        setCurrentTime(Math.min(12.345, payload.duration));
+        setSelectedVariant(nextVariant?.id ?? "");
+        setIsPlaying(false);
+        setTimelineZoom(TIMELINE_ZOOM_MIN);
+      });
+
+      skipNextStoryboardEffectRef.current = true;
+      await runStoryboardDetection({
+        url: previewUrl,
+        duration: payload.duration,
+      });
+
       setAppState("ready");
-      setStatusNote("");
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to prepare the source.";
       setAppState("error");
@@ -1872,19 +1876,56 @@ export function FrameExtractorApp() {
                           void openSource();
                         }
                       }}
-                      className="skeu-input h-11 min-w-0 flex-1 sm:h-12"
+                      disabled={appState === "loading"}
+                      className="skeu-input h-11 min-w-0 flex-1 disabled:pointer-events-none disabled:opacity-60 sm:h-12"
                       placeholder="https://x.com/.../status/..."
                       type="url"
                     />
                     <button
                       type="button"
-                      onClick={openSource}
-                      className="skeu-btn skeu-btn--primary h-11 shrink-0 px-5 sm:h-12 sm:px-7"
+                      onClick={() => void openSource()}
+                      disabled={appState === "loading"}
+                      className="skeu-btn skeu-btn--primary h-11 shrink-0 px-5 disabled:pointer-events-none disabled:opacity-75 sm:h-12 sm:px-7"
                     >
-                      {appState === "loading" ? "Resolving..." : "storyboard it"}
+                      {appState === "loading" && !isAutoStoryboarding
+                        ? "Resolving..."
+                        : appState === "loading" && isAutoStoryboarding
+                          ? "Storyboarding..."
+                          : "storyboard it"}
                     </button>
                   </div>
                 </div>
+
+                {appState === "loading" ? (
+                  <div
+                    className="skeu-inset skeu-inset--light w-full max-w-2xl px-4 py-3 text-left shadow-md sm:px-4 sm:py-3.5"
+                    role="status"
+                    aria-busy="true"
+                    aria-live="polite"
+                    aria-label={
+                      isAutoStoryboarding
+                        ? "Scanning video for storyboard"
+                        : "Resolving post from X"
+                    }
+                  >
+                    <div className="mb-2 flex items-center gap-2.5">
+                      <span className="skeu-spinner" aria-hidden />
+                      <span className="font-display text-sm font-bold tracking-wide text-[#0b1224] sm:text-base">
+                        {isAutoStoryboarding
+                          ? "Step 2 of 2: Scanning the video"
+                          : "Step 1 of 2: Resolving the post"}
+                      </span>
+                    </div>
+                    <div className="skeu-busy-rail mb-2.5">
+                      <div className="skeu-busy-rail__fill" />
+                    </div>
+                    <p className="font-mono text-xs leading-relaxed text-[#33415f] sm:text-sm">
+                      {isAutoStoryboarding
+                        ? "Looking for scene changes across the whole file. Count on seconds for short clips, up to a minute for long ones. This line keeps moving while work is happening."
+                        : "Grabbing playback URLs from X syndication. Usually a few seconds."}
+                    </p>
+                  </div>
+                ) : null}
 
                 <div className="flex justify-center">
                   <button
@@ -1892,7 +1933,8 @@ export function FrameExtractorApp() {
                     onClick={() => {
                       setSourceInput("https://x.com/carterfmotion/status/2040579649722302896");
                     }}
-                    className="skeu-btn skeu-btn--ghost skeu-btn--sm"
+                    disabled={appState === "loading"}
+                    className="skeu-btn skeu-btn--ghost skeu-btn--sm disabled:pointer-events-none disabled:opacity-55"
                   >
                     Use test tweet
                   </button>
@@ -2022,6 +2064,30 @@ export function FrameExtractorApp() {
                       </div>
                     </div>
                   </div>
+                  {isAutoStoryboarding ? (
+                    <div
+                      className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] bg-gradient-to-t from-black/65 via-black/30 to-transparent px-3 pb-3 pt-12 sm:px-4 sm:pb-4 sm:pt-16"
+                      role="status"
+                      aria-live="polite"
+                      aria-busy="true"
+                      aria-label="Video storyboard analysis in progress"
+                    >
+                      <div className="skeu-inset skeu-inset--light mx-auto max-w-md px-3 py-2.5 shadow-[0_8px_28px_rgba(0,0,0,0.35)] sm:max-w-lg sm:px-3.5 sm:py-3">
+                        <div className="mb-2 flex items-center justify-center gap-2">
+                          <span className="skeu-spinner" aria-hidden />
+                          <span className="font-display text-xs font-bold tracking-wide text-[#0b1224] sm:text-sm">
+                            Storyboard pass in progress
+                          </span>
+                        </div>
+                        <div className="skeu-busy-rail">
+                          <div className="skeu-busy-rail__fill" />
+                        </div>
+                        <p className="mt-2 text-center font-mono text-[0.65rem] leading-snug text-[#33415f] sm:text-xs">
+                          The bar slides while the app reads the file. Long clips take longer.
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>

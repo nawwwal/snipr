@@ -1,6 +1,12 @@
-import { NextResponse } from "next/server";
-
+import {
+  applyRateLimit,
+  createSecurityHeaders,
+  enforceSameOriginBrowserRequest,
+  jsonError,
+} from "@/lib/api-security";
 import { isAllowedMediaProxyUrl } from "@/lib/media-hosts";
+
+export const maxDuration = 25;
 
 function getUpstreamUrl(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -24,12 +30,29 @@ function getUpstreamUrl(request: Request) {
 }
 
 async function proxyRequest(request: Request, method: "GET" | "HEAD") {
+  const blockedOrigin = enforceSameOriginBrowserRequest(request);
+
+  if (blockedOrigin) {
+    return blockedOrigin;
+  }
+
+  const rateLimit = applyRateLimit(request, {
+    bucket: "media-proxy",
+    limit: 180,
+    windowMs: 60_000,
+  });
+
+  if (!rateLimit.allowed) {
+    return jsonError("Too many proxy requests. Try again in a minute.", 429, rateLimit.headers);
+  }
+
   const upstreamUrl = getUpstreamUrl(request);
 
   if (!upstreamUrl) {
-    return NextResponse.json(
-      { error: "Only approved X/Twitter media hosts can be proxied here." },
-      { status: 403 },
+    return jsonError(
+      "Only approved X/Twitter media hosts can be proxied here.",
+      403,
+      rateLimit.headers,
     );
   }
 
@@ -40,23 +63,33 @@ async function proxyRequest(request: Request, method: "GET" | "HEAD") {
     upstreamHeaders.set("range", range);
   }
 
-  const upstreamResponse = await fetch(upstreamUrl, {
-    method,
-    headers: upstreamHeaders,
-    cache: "no-store",
-    redirect: "follow",
-  });
+  let upstreamResponse: Response;
+
+  try {
+    upstreamResponse = await fetch(upstreamUrl, {
+      method,
+      headers: upstreamHeaders,
+      cache: "no-store",
+      redirect: "follow",
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error && error.name === "TimeoutError"
+        ? "Upstream media request timed out."
+        : "Upstream media request failed.";
+    return jsonError(message, 504, rateLimit.headers);
+  }
 
   if (!upstreamResponse.ok && upstreamResponse.status !== 206) {
-    return NextResponse.json(
-      {
-        error: `Upstream media request failed with ${upstreamResponse.status}.`,
-      },
-      { status: upstreamResponse.status },
+    return jsonError(
+      `Upstream media request failed with ${upstreamResponse.status}.`,
+      upstreamResponse.status,
+      rateLimit.headers,
     );
   }
 
-  const responseHeaders = new Headers();
+  const responseHeaders = createSecurityHeaders(rateLimit.headers);
   const passthroughHeaders = [
     "accept-ranges",
     "cache-control",

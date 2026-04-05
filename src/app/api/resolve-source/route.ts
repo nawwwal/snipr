@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 
 import {
+  applyRateLimit,
+  createSecurityHeaders,
+  enforceSameOriginBrowserRequest,
+  getJsonBodySize,
+  jsonError,
+} from "@/lib/api-security";
+import {
   buildStoryboard,
   detectSourceType,
   extractStatusId,
@@ -8,6 +15,8 @@ import {
   type ResolveSourceResponse,
   type VideoVariant,
 } from "@/lib/frame-extractor";
+
+export const maxDuration = 10;
 
 type RequestBody = {
   input?: string;
@@ -198,54 +207,82 @@ function getTweetContext(tweet: SyndicationTweet | undefined) {
 }
 
 export async function POST(request: Request) {
+  const blockedOrigin = enforceSameOriginBrowserRequest(request);
+
+  if (blockedOrigin) {
+    return blockedOrigin;
+  }
+
+  const rateLimit = applyRateLimit(request, {
+    bucket: "resolve-source",
+    limit: 40,
+    windowMs: 60_000,
+  });
+
+  if (!rateLimit.allowed) {
+    return jsonError("Too many resolve requests. Try again in a minute.", 429, rateLimit.headers);
+  }
+
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (!contentType.toLowerCase().includes("application/json")) {
+    return jsonError("Requests must use application/json.", 415, rateLimit.headers);
+  }
+
+  const bodySize = getJsonBodySize(request);
+
+  if (bodySize !== null && bodySize > 4_096) {
+    return jsonError("Request body is too large.", 413, rateLimit.headers);
+  }
+
   const body = (await request.json()) as RequestBody;
   const normalizedInput = normalizeSourceInput(body.input ?? "");
 
   if (!normalizedInput) {
-    return NextResponse.json(
-      { error: "Enter an X URL or a direct MP4/WebM URL first." },
-      { status: 400 },
-    );
+    return jsonError("Enter an X URL or a direct MP4/WebM URL first.", 400, rateLimit.headers);
   }
 
   const inferredSourceType = body.sourceType ?? detectSourceType(normalizedInput);
 
   if (inferredSourceType === "upload") {
-    return NextResponse.json(
-      { error: "Uploads are handled directly in the browser for the MVP." },
-      { status: 400 },
-    );
+    return jsonError("Uploads are handled directly in the browser for the MVP.", 400, rateLimit.headers);
   }
 
   if (inferredSourceType === "x-url") {
     const statusId = extractStatusId(normalizedInput);
 
     if (!statusId) {
-      return NextResponse.json(
-        { error: "That does not look like a valid X status URL." },
-        { status: 400 },
-      );
+      return jsonError("That does not look like a valid X status URL.", 400, rateLimit.headers);
     }
 
-    const syndicationResponse = await fetch(
-      `https://cdn.syndication.twimg.com/tweet-result?id=${statusId}&token=x`,
-      {
-        headers: {
-          accept: "application/json",
+    let syndicationResponse: Response;
+
+    try {
+      syndicationResponse = await fetch(
+        `https://cdn.syndication.twimg.com/tweet-result?id=${statusId}&token=x`,
+        {
+          headers: {
+            accept: "application/json",
+          },
+          cache: "no-store",
+          signal: AbortSignal.timeout(8_000),
         },
-        cache: "no-store",
-      },
-    );
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error && error.name === "TimeoutError"
+          ? "X metadata lookup timed out."
+          : "X metadata lookup failed.";
+      return jsonError(message, 504, rateLimit.headers);
+    }
 
     if (!syndicationResponse.ok) {
-      return NextResponse.json(
-        {
-          error:
-            syndicationResponse.status === 404
-              ? "That X post could not be found."
-              : "X metadata lookup failed. This unofficial resolver may be temporarily blocked.",
-        },
-        { status: syndicationResponse.status === 404 ? 404 : 502 },
+      return jsonError(
+        syndicationResponse.status === 404
+          ? "That X post could not be found."
+          : "X metadata lookup failed. This unofficial resolver may be temporarily blocked.",
+        syndicationResponse.status === 404 ? 404 : 502,
+        rateLimit.headers,
       );
     }
 
@@ -253,12 +290,10 @@ export async function POST(request: Request) {
     const media = findPlayableMedia(tweet);
 
     if (!media) {
-      return NextResponse.json(
-        {
-          error:
-            "No playable video was found for that post. Protected posts, deleted posts, and image-only tweets will not resolve here.",
-        },
-        { status: 422 },
+      return jsonError(
+        "No playable video was found for that post. Protected posts, deleted posts, and image-only tweets will not resolve here.",
+        422,
+        rateLimit.headers,
       );
     }
 
@@ -267,11 +302,10 @@ export async function POST(request: Request) {
       variants.find((variant) => variant.contentType === "video/mp4") ?? variants[0] ?? null;
 
     if (!preferredVariant) {
-      return NextResponse.json(
-        {
-          error: "The post resolved, but no downloadable playback variants were exposed.",
-        },
-        { status: 422 },
+      return jsonError(
+        "The post resolved, but no downloadable playback variants were exposed.",
+        422,
+        rateLimit.headers,
       );
     }
 
@@ -300,7 +334,9 @@ export async function POST(request: Request) {
         "Resolved through X's public syndication metadata, not the official developer API. This is fine for personal use, but it can break without notice.",
     };
 
-    return NextResponse.json(response);
+    return NextResponse.json(response, {
+      headers: createSecurityHeaders(rateLimit.headers),
+    });
   }
 
   const response: ResolveSourceResponse = {
@@ -327,5 +363,7 @@ export async function POST(request: Request) {
       "Direct URLs may still fail in-browser if the host blocks cross-origin video drawing. Keep upload mode available as the reliable fallback.",
   };
 
-  return NextResponse.json(response);
+  return NextResponse.json(response, {
+    headers: createSecurityHeaders(rateLimit.headers),
+  });
 }

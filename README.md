@@ -4,7 +4,7 @@
 
 ## Ship it on Vercel
 
-This repo is a stock Next.js App Router app: `npm run build` is what you need. Import the GitHub repo in Vercel, leave defaults, add no env vars unless you fork in secrets later. API routes (`/api/resolve-source`, `/api/media-proxy`) run as serverless fetches. Very long proxy downloads or abusive open proxy traffic are the usual cloud caveats, not a missing config flag.
+This repo is a stock Next.js App Router app: `npm run build` is what you need. Import the GitHub repo in Vercel, leave defaults, add no env vars unless you fork in secrets later. API routes (`/api/resolve-source`, `/api/media-proxy`) run as serverless fetches. The deployment now has basic rate limiting, same-origin browser checks, upstream timeouts, and the media proxy is restricted to approved X/Twitter media hosts, so the main remaining caveat is that the unofficial X resolver can break without warning.
 
 This is a Next.js app that looks like it time traveled from 2004, then robbed a candy factory, then decided to help you steal frames from video. Paste a post URL. Get a storyboard. Export a ZIP. Feel like a digital raccoon with a master’s degree.
 
