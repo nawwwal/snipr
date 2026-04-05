@@ -2062,12 +2062,12 @@ export function FrameExtractorApp() {
   }
 
   return (
-    <main className="flex h-full min-h-0 w-full min-w-0 flex-col gap-2 overflow-hidden px-3 py-1 sm:px-4 lg:px-6">
+    <main className="flex h-full min-h-0 w-full min-w-0 flex-col gap-2 overflow-hidden p-[12px]">
       <section className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden sm:gap-2">
         <div className="flex min-h-0 flex-[3] basis-0 flex-col gap-2 overflow-hidden lg:flex-row">
           <div className="skeu-window flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-            <div className="flex min-h-0 flex-1 flex-col p-2">
-              <div className="skeu-inset relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.35rem] border-[3px] p-1">
+            <div className="flex min-h-0 flex-1 flex-col bg-[#f0f0f0] p-2">
+              <div className="skeu-inset relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border-[3px] bg-[#f0f0f0] p-1">
                 <div className="relative min-h-0 min-w-0 flex-1 bg-black">
                   {activeVideoUrl ? (
                     <video
@@ -2172,30 +2172,6 @@ export function FrameExtractorApp() {
                       </div>
                     </div>
                   </div>
-                  {isAutoStoryboarding ? (
-                    <div
-                      className="pointer-events-none absolute inset-x-0 bottom-0 z-[15] bg-gradient-to-t from-black/65 via-black/30 to-transparent px-3 pb-3 pt-12 sm:px-4 sm:pb-4 sm:pt-16"
-                      role="status"
-                      aria-live="polite"
-                      aria-busy="true"
-                      aria-label="Video storyboard analysis in progress"
-                    >
-                      <div className="skeu-inset skeu-inset--light mx-auto max-w-md px-3 py-2.5 shadow-[0_8px_28px_rgba(0,0,0,0.35)] sm:max-w-lg sm:px-3.5 sm:py-3">
-                        <div className="mb-2 flex items-center justify-center gap-2">
-                          <span className="skeu-spinner" aria-hidden />
-                          <span className="font-display text-xs font-bold tracking-wide text-[#0b1224] sm:text-sm">
-                            Storyboard pass in progress
-                          </span>
-                        </div>
-                        <div className="skeu-busy-rail">
-                          <div className="skeu-busy-rail__fill" />
-                        </div>
-                        <p className="mt-2 text-center font-mono text-[0.65rem] leading-snug text-[#33415f] sm:text-xs">
-                          The bar slides while the app reads the file. Long clips take longer.
-                        </p>
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
               </div>
             </div>
@@ -2203,7 +2179,7 @@ export function FrameExtractorApp() {
 
           <aside className="flex min-h-0 w-full min-w-0 flex-col gap-2 overflow-hidden lg:w-[min(300px,32vw)] lg:shrink-0 lg:self-stretch">
             <section className="skeu-panel flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-              <div className="skeu-panel__inner min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain !px-3 !py-2 sm:space-y-2 sm:!px-3.5 sm:!py-2.5">
+              <div className="skeu-panel__inner min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain p-[12px] sm:space-y-2">
                 <div>
                 <label className="skeu-label mb-0.5 block sm:mb-1" htmlFor="playable-variant">
                   Playable variant
@@ -2348,7 +2324,7 @@ export function FrameExtractorApp() {
         </div>
 
         <div className="skeu-panel flex min-h-0 min-w-0 flex-1 basis-0 flex-col overflow-hidden lg:max-h-[min(320px,36dvh)]">
-          <div className="skeu-panel__inner flex min-h-0 flex-1 flex-col gap-2 overflow-hidden !px-3 !py-2 sm:!px-3.5 sm:!py-2.5">
+          <div className="skeu-panel__inner flex min-h-0 flex-1 flex-col gap-2 overflow-hidden pt-[10px] pl-[10px] pr-[10px] pb-2">
             <div className="skeu-inset skeu-inset--light flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden px-3 py-2 sm:px-3.5 sm:py-2.5">
               <div className="flex min-w-0 shrink-0 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
                 <div
@@ -2487,51 +2463,80 @@ export function FrameExtractorApp() {
 
               <div
                 ref={filmstripRef}
-                className="skeu-scroll mt-2 flex min-h-0 flex-1 flex-nowrap gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5"
+                className={
+                  isAutoStoryboarding && storyboardFramesSorted.length === 0
+                    ? "mt-2 flex min-h-0 flex-1 shrink-0 flex-col items-stretch justify-start overflow-hidden"
+                    : "skeu-scroll mt-2 flex min-h-0 flex-1 flex-nowrap gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-0.5 [-ms-overflow-style:none] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5"
+                }
               >
-                {storyboardFramesSorted.map((frame) => {
-                  const isActive = frame.id === activeFrameId;
-                  return (
-                    <article
-                      key={frame.id}
-                      ref={(node) => {
-                        storyCardRefs.current[frame.id] = node;
-                      }}
-                      className={`skeu-story-card relative w-[96px] shrink-0 sm:w-[108px] ${isActive ? "skeu-story-card--active" : ""}`}
-                    >
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => scrubTo(frame.timestamp)}
-                          className="block w-full text-left"
-                        >
-                          <div
-                            className="skeu-thumb aspect-video bg-cover bg-center"
-                            style={{
-                              backgroundImage: `url(${getStoryboardPreview(frame)})`,
-                            }}
-                          />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeFrame(frame.id)}
-                          className="skeu-btn skeu-btn--icon skeu-btn--sm absolute right-1.5 bottom-1.5 !h-7 !w-7 !text-xs opacity-0 transition-opacity hover:!opacity-100 focus-visible:!opacity-100 [article:hover_&]:opacity-80"
-                          aria-label={`Remove ${frame.label}`}
-                        >
-                          ×
-                        </button>
+                {isAutoStoryboarding && storyboardFramesSorted.length === 0 ? (
+                  <div
+                    className="skeu-inset skeu-inset--light flex w-full min-w-0 flex-row items-center gap-2 px-2 py-1.5 sm:gap-2.5 sm:px-2.5 sm:py-1.5"
+                    role="status"
+                    aria-busy="true"
+                    aria-live="polite"
+                    aria-label="Storyboard analysis in progress"
+                  >
+                    <span className="skeu-spinner shrink-0" aria-hidden />
+                    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1">
+                      <div className="flex min-w-0 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2">
+                        <span className="font-display text-[0.7rem] font-bold tracking-wide text-[#0b1224] sm:text-xs">
+                          Storyboard in progress
+                        </span>
+                        <span className="font-mono text-[0.6rem] leading-snug text-[#5a6988] sm:text-[0.65rem]">
+                          Scene picks appear here; long clips take longer.
+                        </span>
                       </div>
-                      <div className="mt-1 px-0.5">
-                        <div className="truncate text-xs font-medium sm:text-sm">{frame.label}</div>
-                        <div
-                          className={`truncate text-[0.65rem] sm:text-xs ${isActive ? "text-[#c5e1ff]" : "text-[#475569]"}`}
-                        >
-                          {formatTimestamp(frame.timestamp)}
+                      <div className="skeu-busy-rail !h-1.5 shrink-0 sm:!h-2">
+                        <div className="skeu-busy-rail__fill" />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  storyboardFramesSorted.map((frame) => {
+                    const isActive = frame.id === activeFrameId;
+                    return (
+                      <article
+                        key={frame.id}
+                        ref={(node) => {
+                          storyCardRefs.current[frame.id] = node;
+                        }}
+                        className={`skeu-story-card relative w-[96px] shrink-0 sm:w-[108px] ${isActive ? "skeu-story-card--active" : ""}`}
+                      >
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => scrubTo(frame.timestamp)}
+                            className="block w-full text-left"
+                          >
+                            <div
+                              className="skeu-thumb aspect-video bg-cover bg-center"
+                              style={{
+                                backgroundImage: `url(${getStoryboardPreview(frame)})`,
+                              }}
+                            />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeFrame(frame.id)}
+                            className="skeu-btn skeu-btn--icon skeu-btn--sm absolute right-1.5 bottom-1.5 !h-7 !w-7 !text-xs opacity-0 transition-opacity hover:!opacity-100 focus-visible:!opacity-100 [article:hover_&]:opacity-80"
+                            aria-label={`Remove ${frame.label}`}
+                          >
+                            ×
+                          </button>
                         </div>
-                      </div>
-                    </article>
-                  );
-                })}
+                        <div className="mt-1 px-0.5">
+                          <div className="truncate text-xs font-medium sm:text-sm">{frame.label}</div>
+                          <div
+                            className={`truncate text-[0.65rem] sm:text-xs ${isActive ? "text-[#c5e1ff]" : "text-[#475569]"}`}
+                          >
+                            {formatTimestamp(frame.timestamp)}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>

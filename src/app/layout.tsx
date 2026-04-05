@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Agentation } from "agentation";
+import { InterfaceKit } from "interface-kit/react";
 import { Silkscreen, VT323 } from "next/font/google";
 
 import "./globals.css";
@@ -40,6 +41,7 @@ export default function RootLayout({
         <div className="skeu-noise" aria-hidden />
         <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
           {children}
+          {process.env.NODE_ENV === "development" ? <InterfaceKit /> : null}
         </div>
         {process.env.NODE_ENV === "development" && <Agentation />}
       </body>
