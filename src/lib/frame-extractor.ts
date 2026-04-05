@@ -198,7 +198,7 @@ export function createPlaceholderFrameDataUrl(
       </defs>
       <rect width="1280" height="720" fill="url(#wash)" rx="36" />
       <rect x="48" y="48" width="1184" height="624" rx="28" fill="rgba(10,14,24,0.42)" stroke="rgba(255,255,255,0.24)" />
-      <text x="80" y="130" fill="#f7f0e8" font-size="36" font-family="Space Grotesk, sans-serif">Frame Extractor Preview</text>
+      <text x="80" y="130" fill="#f7f0e8" font-size="36" font-family="Space Grotesk, sans-serif">snipr preview</text>
       <text x="80" y="188" fill="#fff6d8" font-size="112" font-weight="700" font-family="Space Grotesk, sans-serif">${formatTimestamp(
         timestamp,
       )}</text>

@@ -17,9 +17,9 @@ const vt323 = VT323({
 });
 
 export const metadata: Metadata = {
-  title: "Frame Extractor MVP",
+  title: "snipr | rip the video",
   description:
-    "A Next.js MVP for resolving video sources, generating storyboards, selecting frames, and exporting packages.",
+    "Resolve posts, storyboard moments, and export frames from video. Rip the video.",
 };
 
 export const viewport: Viewport = {

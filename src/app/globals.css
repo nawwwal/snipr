@@ -1,25 +1,29 @@
 @import "tailwindcss";
 
 :root {
-  --skeu-bg-top: #1a2f6e;
-  --skeu-bg-mid: #2b59c3;
-  --skeu-bg-bottom: #1e3a7a;
+  --skeu-bg-top: #2244b8;
+  --skeu-bg-mid: #3366dd;
+  --skeu-bg-bottom: #1a3399;
   --skeu-pink-bright: #ff7eb8;
   --skeu-pink-mid: #ff61a6;
-  --skeu-pink-deep: #c73d7e;
+  --skeu-pink-deep: #d4408a;
   --skeu-lavender: #e5cffb;
   --skeu-sky: #c5e1ff;
   --skeu-sky-deep: #7eb8ff;
-  --skeu-screen: #0c1528;
+  --skeu-screen: #070e1e;
   --skeu-screen-border: #1e3a5c;
-  --skeu-text: #f1f5ff;
+  --skeu-text: #eef4ff;
   --skeu-text-muted: #a8c6ff;
-  --skeu-border: #0b1224;
-  --skeu-gloss: rgba(255, 255, 255, 0.42);
+  --skeu-border: #080e22;
+  --skeu-gloss: rgba(255, 255, 255, 0.58);
   --skeu-shadow: rgba(0, 0, 0, 0.55);
-  --skeu-cap-blue: #3b7ddd;
-  --skeu-cap-purple: #8b5cf6;
-  --skeu-cap-red: #ef4444;
+  --skeu-cap-blue: #4a8eff;
+  --skeu-cap-purple: #9b6eff;
+  --skeu-cap-red: #ff5555;
+  /* Softer default for remaining var() uses; hero halation uses layered shadows below */
+  --skeu-glow-pink: rgba(255, 125, 175, 0.28);
+  --skeu-glow-blue: rgba(80, 160, 255, 0.4);
+  --skeu-glow-amber: rgba(255, 191, 36, 0.45);
   --background: var(--skeu-bg-mid);
   --foreground: var(--skeu-text);
 }
@@ -48,15 +52,29 @@ body {
   font-family: var(--font-vt323), ui-monospace, monospace;
   font-size: 1.125rem;
   line-height: 1.45;
-  background-color: var(--skeu-bg-mid);
+  background-color: #152a7a;
   background-image:
+    radial-gradient(ellipse 55% 40% at 50% 0%, rgba(255, 255, 255, 0.14), transparent 58%),
     repeating-linear-gradient(
-      -12deg,
-      rgba(255, 255, 255, 0.03) 0 1px,
-      transparent 1px 6px
+      90deg,
+      rgba(0, 0, 0, 0.04) 0 1px,
+      rgba(255, 255, 255, 0.025) 1px 2px
     ),
-    radial-gradient(ellipse 120% 80% at 50% -20%, rgba(197, 225, 255, 0.22), transparent 55%),
-    linear-gradient(180deg, var(--skeu-bg-top) 0%, var(--skeu-bg-mid) 45%, var(--skeu-bg-bottom) 100%);
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.02) 0 1px,
+      transparent 1px 4px
+    ),
+    repeating-linear-gradient(
+      -18deg,
+      rgba(255, 255, 255, 0.04) 0 1px,
+      transparent 1px 7px
+    ),
+    radial-gradient(ellipse 140% 55% at 50% -10%, rgba(160, 210, 255, 0.5), transparent 55%),
+    radial-gradient(ellipse 70% 60% at 15% 110%, rgba(255, 140, 185, 0.12), transparent 52%),
+    radial-gradient(ellipse 60% 50% at 85% 105%, rgba(139, 92, 246, 0.2), transparent 50%),
+    radial-gradient(ellipse 100% 80% at 50% 100%, rgba(0, 0, 0, 0.35), transparent 55%),
+    linear-gradient(180deg, var(--skeu-bg-top) 0%, var(--skeu-bg-mid) 42%, var(--skeu-bg-bottom) 100%);
   text-shadow: 0 1px 0 var(--skeu-shadow);
 }
 
@@ -68,41 +86,115 @@ select {
 }
 
 ::selection {
-  background: rgba(255, 97, 166, 0.55);
+  background: rgba(255, 97, 166, 0.6);
   color: #0b1020;
 }
 
-/* --- Skeuomorphic primitives --- */
+/* ========================================================================
+   SKEUOMORPHIC PRIMITIVES — vibrant 2000s chrome / gel / halation
+   ======================================================================== */
 
+/* --- WINDOW (chrome bezel + pink halation glow) --- */
 .skeu-window {
   position: relative;
-  border-radius: 2rem;
-  border: 2px solid var(--skeu-border);
-  background: linear-gradient(165deg, #f6d4ff 0%, var(--skeu-sky) 58%, #9ec8ff 100%);
+  border-radius: 2.25rem;
+  border: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, transparent 28%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.18) 0%, transparent 35%),
+    linear-gradient(165deg, #f0d8ff 0%, #d0e4ff 28%, #a8caf8 58%, #88b8f0 100%);
   box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 0 0 2px rgba(5, 10, 36, 0.65),
+    0 0 0 3px rgba(100, 150, 240, 0.25),
     0 1px 0 var(--skeu-gloss) inset,
-    0 14px 0 rgba(0, 0, 0, 0.18),
-    10px 16px 0 rgba(0, 0, 0, 0.35);
+    0 5px 0 rgba(180, 210, 255, 0.45) inset,
+    0 20px 40px rgba(0, 0, 0, 0.18) inset,
+    0 18px 0 rgba(0, 0, 0, 0.22),
+    /* Halation: offset + stacked falloff (warm → rose → cool) instead of one neon ring */
+    0 16px 36px rgba(255, 110, 155, 0.09),
+    0 8px 56px rgba(248, 175, 205, 0.08),
+    0 0 88px rgba(205, 195, 245, 0.07),
+    0 0 130px rgba(140, 185, 255, 0.05),
+    10px 24px 48px rgba(0, 0, 0, 0.42);
   overflow: hidden;
+}
+
+.skeu-window::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 55%;
+  border-radius: 0 0 50% 50%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.32), transparent 62%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .skeu-window--compact {
   border-radius: 1.75rem;
   box-shadow:
     0 1px 0 var(--skeu-gloss) inset,
-    0 8px 0 rgba(0, 0, 0, 0.16),
-    6px 10px 0 rgba(0, 0, 0, 0.3);
+    0 3px 0 rgba(180, 210, 255, 0.4) inset,
+    0 10px 0 rgba(0, 0, 0, 0.16),
+    0 12px 32px rgba(255, 115, 165, 0.07),
+    0 0 52px rgba(210, 185, 235, 0.06),
+    5px 14px 32px rgba(0, 0, 0, 0.35);
 }
 
+/* --- TITLEBAR (hot pink metallic + halation bloom) --- */
 .skeu-titlebar {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  padding: 0.65rem 1rem 0.65rem 1.15rem;
-  background: linear-gradient(180deg, #ff8cc9 0%, var(--skeu-pink-mid) 38%, var(--skeu-pink-deep) 100%);
-  border-bottom: 2px solid rgba(11, 18, 36, 0.45);
-  box-shadow: 0 2px 0 rgba(255, 255, 255, 0.35) inset;
+  padding: 0.7rem 1.1rem 0.7rem 1.2rem;
+  background:
+    repeating-linear-gradient(
+      -80deg,
+      transparent 0 6px,
+      rgba(255, 255, 255, 0.03) 6px 7px
+    ),
+    radial-gradient(ellipse 85% 120% at 50% -25%, rgba(255, 255, 255, 0.72), transparent 46%),
+    radial-gradient(ellipse 50% 80% at 100% 50%, rgba(255, 200, 240, 0.35), transparent 55%),
+    linear-gradient(180deg, #ffc0e4 0%, var(--skeu-pink-mid) 26%, var(--skeu-pink-deep) 68%, #881850 100%);
+  border-bottom: none;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 4px 8px rgba(255, 160, 210, 0.25) inset,
+    0 -3px 8px rgba(0, 0, 0, 0.28) inset,
+    0 4px 0 rgba(5, 10, 24, 0.35),
+    0 12px 26px rgba(255, 95, 150, 0.09),
+    0 6px 48px rgba(240, 170, 200, 0.06),
+    0 3px 12px rgba(60, 20, 45, 0.16);
+  z-index: 1;
+}
+
+.skeu-titlebar::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.35) 15%, rgba(0, 0, 0, 0.35) 85%, transparent);
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+.skeu-titlebar::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 5%;
+  right: 5%;
+  height: 55%;
+  border-radius: 0 0 50% 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), transparent);
+  pointer-events: none;
 }
 
 .skeu-titlebar__text {
@@ -114,17 +206,17 @@ select {
   text-transform: uppercase;
   color: #fff;
   text-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.65),
-    0 0 12px rgba(255, 255, 255, 0.35);
+    0 1px 0 rgba(0, 0, 0, 0.7),
+    0 0 10px rgba(255, 255, 255, 0.22),
+    0 0 24px rgba(255, 210, 230, 0.14);
 }
 
 .skeu-titlebar__caps {
   display: flex;
-  gap: 0.35rem;
+  gap: 0.4rem;
   flex-shrink: 0;
 }
 
-/* Single-line left title (launch / custom bars) */
 .skeu-titlebar__lead {
   justify-content: flex-start;
   text-align: left;
@@ -151,156 +243,424 @@ select {
   text-align: left;
 }
 
+/* --- TITLE CAPS (glossy candy orbs with glow) --- */
 .skeu-titlecap {
-  width: 0.85rem;
-  height: 0.85rem;
+  width: 0.95rem;
+  height: 0.95rem;
   border-radius: 999px;
-  border: 2px solid rgba(11, 18, 36, 0.55);
+  border: 2px solid rgba(5, 10, 24, 0.65);
   box-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.35),
-    0 1px 0 rgba(255, 255, 255, 0.45) inset;
+    0 3px 0 rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 -1px 3px rgba(0, 0, 0, 0.15) inset;
+  position: relative;
+}
+
+.skeu-titlecap::after {
+  content: "";
+  position: absolute;
+  top: 1px;
+  left: 15%;
+  width: 45%;
+  height: 40%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.15));
 }
 
 .skeu-titlecap--blue {
-  background: radial-gradient(circle at 30% 28%, #9ecbff, var(--skeu-cap-blue) 55%);
+  background: radial-gradient(circle at 35% 32%, #c0e4ff, var(--skeu-cap-blue) 48%, #1a55cc 100%);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 0 8px rgba(74, 142, 255, 0.7);
 }
+
 .skeu-titlecap--purple {
-  background: radial-gradient(circle at 30% 28%, #d9c8ff, var(--skeu-cap-purple) 55%);
+  background: radial-gradient(circle at 35% 32%, #e4d4ff, var(--skeu-cap-purple) 48%, #5b21b6 100%);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 0 8px rgba(155, 110, 255, 0.7);
 }
+
 .skeu-titlecap--red {
-  background: radial-gradient(circle at 30% 28%, #ffb4b4, var(--skeu-cap-red) 55%);
+  background: radial-gradient(circle at 35% 32%, #ffc8c8, var(--skeu-cap-red) 48%, #cc2222 100%);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 0 8px rgba(255, 85, 85, 0.7);
 }
 
 .skeu-frame-body {
   padding: 1.15rem 1.2rem 1.35rem;
 }
 
-.skeu-inset {
+/* --- GLASS OVERLAY (frosted skeu glassmorphism) --- */
+.skeu-glass {
+  position: relative;
+  isolation: isolate;
   border-radius: 1.35rem;
-  border: 2px solid rgba(11, 18, 36, 0.65);
-  background: radial-gradient(120% 100% at 50% 0%, #152445 0%, var(--skeu-screen) 55%, #050812 100%);
+  border: none;
+  background:
+    linear-gradient(125deg, rgba(255, 255, 255, 0.14) 0%, transparent 45%),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.26) 0%,
+      rgba(200, 220, 255, 0.14) 38%,
+      rgba(100, 140, 220, 0.1) 100%
+    );
+  -webkit-backdrop-filter: blur(20px) saturate(1.75);
+  backdrop-filter: blur(20px) saturate(1.75);
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.55) inset,
-    0 1px 0 rgba(255, 255, 255, 0.06) inset;
+    0 0 0 1px rgba(255, 255, 255, 0.42),
+    0 0 0 2px rgba(8, 14, 40, 0.22),
+    0 2px 0 rgba(255, 255, 255, 0.35) inset,
+    0 -8px 18px rgba(0, 0, 0, 0.12) inset,
+    0 6px 20px rgba(0, 0, 0, 0.28),
+    0 0 24px rgba(120, 180, 255, 0.12);
+  color: #fff;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.55),
+    0 0 12px rgba(200, 230, 255, 0.2);
+}
+
+.skeu-glass::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 90% 55% at 28% -5%, rgba(255, 255, 255, 0.32), transparent 58%);
+}
+
+.skeu-glass::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: calc(1.35rem - 1px);
+  pointer-events: none;
+  z-index: -1;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.15) inset,
+    0 10px 24px rgba(0, 0, 0, 0.08) inset;
+}
+
+/* --- INSETS (dark LCD / CRT screen with halation) --- */
+.skeu-inset {
+  position: relative;
+  border-radius: 1.35rem;
+  border: none;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(60, 200, 255, 0.04) 0 1px,
+      transparent 1px 2px
+    ),
+    radial-gradient(ellipse 100% 80% at 50% 0%, rgba(40, 100, 200, 0.35), transparent 55%),
+    radial-gradient(120% 100% at 50% 100%, #020308 0%, var(--skeu-screen) 45%, #000205 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 0 2px rgba(5, 10, 24, 0.85),
+    0 14px 40px rgba(0, 0, 0, 0.75) inset,
+    0 2px 10px rgba(0, 0, 0, 0.5) inset,
+    0 1px 0 rgba(120, 180, 255, 0.15),
+    0 0 28px rgba(60, 140, 255, 0.18);
   color: var(--skeu-text);
 }
 
 .skeu-inset--light {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(197, 225, 255, 0.12));
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.04) 0 1px,
+      transparent 1px 3px
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22) 0%, transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(220, 235, 255, 0.28));
   color: #0b1224;
   text-shadow: none;
   box-shadow:
-    0 6px 18px rgba(0, 0, 0, 0.22) inset,
-    0 1px 0 rgba(255, 255, 255, 0.65) inset;
+    0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 0 0 2px rgba(5, 10, 24, 0.32),
+    0 10px 26px rgba(0, 0, 0, 0.2) inset,
+    0 2px 6px rgba(0, 0, 0, 0.08) inset,
+    0 2px 0 rgba(255, 255, 255, 0.85) inset,
+    0 0 16px rgba(180, 210, 255, 0.12);
 }
 
 .skeu-divider-h {
-  height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(11, 18, 36, 0.35), transparent);
+  height: 3px;
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent),
+    linear-gradient(90deg, transparent, rgba(11, 18, 36, 0.38) 20%, rgba(11, 18, 36, 0.38) 80%, transparent);
   margin: 0.75rem 0;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45),
+    0 2px 0 rgba(0, 0, 0, 0.06) inset;
 }
 
+/* --- LABELS --- */
 .skeu-label {
   font-family: var(--font-silkscreen), ui-monospace, monospace;
   font-size: 0.55rem;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: rgba(11, 18, 36, 0.72);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  color: rgba(11, 18, 36, 0.75);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
 .skeu-label--on-dark {
   color: var(--skeu-text-muted);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.65);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
 }
 
+/* --- PILLS (gel capsules with halation) --- */
 .skeu-pill {
+  position: relative;
   border-radius: 999px;
-  border: 2px solid rgba(11, 18, 36, 0.35);
-  background: linear-gradient(180deg, #fdf2ff 0%, #d4e9ff 100%);
+  border: none;
+  background:
+    radial-gradient(ellipse 85% 180% at 50% -10%, rgba(255, 255, 255, 0.35), transparent 52%),
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.3) 0%,
+      rgba(200, 220, 255, 0.16) 50%,
+      rgba(140, 190, 255, 0.1) 100%
+    );
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
   box-shadow:
-    0 3px 0 rgba(0, 0, 0, 0.18),
-    0 1px 0 rgba(255, 255, 255, 0.55) inset;
-  color: #0b1224;
-  text-shadow: none;
+    0 0 0 1px rgba(255, 255, 255, 0.38),
+    0 0 0 2px rgba(8, 20, 50, 0.12),
+    0 2px 0 rgba(255, 255, 255, 0.45) inset,
+    0 -4px 10px rgba(0, 0, 0, 0.06) inset,
+    0 4px 0 rgba(0, 0, 0, 0.14),
+    0 5px 14px rgba(0, 0, 0, 0.16),
+    0 0 18px rgba(180, 220, 255, 0.15);
+  color: #fff;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.52),
+    0 0 10px rgba(255, 255, 255, 0.12);
 }
 
 .skeu-pill--inverse {
-  background: linear-gradient(180deg, #1e3a8a 0%, #0f1f55 100%);
-  color: var(--skeu-text);
-  border-color: rgba(0, 0, 0, 0.45);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+  background:
+    radial-gradient(ellipse 80% 140% at 30% -5%, rgba(160, 220, 255, 0.28), transparent 50%),
+    linear-gradient(
+      180deg,
+      rgba(100, 160, 255, 0.38) 0%,
+      rgba(40, 90, 200, 0.32) 50%,
+      rgba(15, 35, 110, 0.28) 100%
+    );
+  color: #fff;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.58),
+    0 0 12px rgba(120, 200, 255, 0.25);
+  box-shadow:
+    0 0 0 1px rgba(180, 220, 255, 0.25),
+    0 0 0 2px rgba(0, 0, 0, 0.2),
+    0 2px 0 rgba(150, 210, 255, 0.35) inset,
+    0 -4px 12px rgba(0, 0, 0, 0.15) inset,
+    0 4px 0 rgba(0, 0, 0, 0.22),
+    0 0 20px rgba(80, 140, 255, 0.22);
 }
 
+/* --- BUTTONS (vibrant gel with halation glow) --- */
 .skeu-btn {
   cursor: pointer;
+  position: relative;
   border-radius: 999px;
-  border: 2px solid rgba(11, 18, 36, 0.5);
-  padding: 0.45rem 1rem;
+  border: 2.5px solid rgba(5, 10, 24, 0.5);
+  padding: 0.48rem 1.05rem;
   font-size: 1rem;
   color: #0b1224;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
-  background: linear-gradient(165deg, #ffffff 0%, #c7ddff 45%, #7fb2ff 100%);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  background:
+    radial-gradient(ellipse 90% 160% at 50% -25%, rgba(255, 255, 255, 0.75), transparent 50%),
+    linear-gradient(165deg, #ffffff 0%, #d0e4ff 35%, #8abfff 70%, #5ea0f0 100%);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.6) inset,
-    0 5px 0 rgba(15, 25, 60, 0.45),
-    0 8px 12px rgba(0, 0, 0, 0.22);
+    0 0 0 1px rgba(255, 255, 255, 0.35) inset,
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 -1px 4px rgba(0, 0, 0, 0.08) inset,
+    0 7px 0 rgba(15, 30, 70, 0.48),
+    0 0 16px var(--skeu-glow-blue),
+    0 10px 18px rgba(0, 0, 0, 0.24);
   transition:
-    transform 0.05s ease,
-    box-shadow 0.05s ease,
-    filter 0.12s ease;
+    transform 0.06s ease,
+    box-shadow 0.06s ease,
+    filter 0.1s ease;
 }
 
 .skeu-btn:hover {
-  filter: brightness(1.06);
+  filter: brightness(1.1) saturate(1.08);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.85) inset,
+    0 -1px 4px rgba(0, 0, 0, 0.08) inset,
+    0 6px 0 rgba(15, 30, 70, 0.45),
+    0 0 24px var(--skeu-glow-blue),
+    0 0 48px rgba(80, 160, 255, 0.15),
+    0 8px 16px rgba(0, 0, 0, 0.22);
 }
 
 .skeu-btn:active {
-  transform: translateY(2px);
+  transform: translateY(3px);
+  filter: brightness(0.97);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.45) inset,
-    0 2px 0 rgba(15, 25, 60, 0.45),
-    0 4px 8px rgba(0, 0, 0, 0.2);
+    0 1px 0 rgba(255, 255, 255, 0.5) inset,
+    0 -1px 4px rgba(0, 0, 0, 0.12) inset,
+    0 2px 0 rgba(15, 30, 70, 0.45),
+    0 0 10px var(--skeu-glow-blue),
+    0 3px 8px rgba(0, 0, 0, 0.18);
 }
 
 .skeu-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
-  filter: grayscale(0.2);
+  opacity: 0.5;
+  filter: grayscale(0.3) brightness(0.92);
   transform: none;
 }
 
 .skeu-btn--primary {
-  background: linear-gradient(165deg, #ffd6ec 0%, var(--skeu-pink-mid) 42%, var(--skeu-pink-deep) 100%);
+  background:
+    radial-gradient(ellipse 80% 150% at 50% -20%, rgba(255, 255, 255, 0.65), transparent 48%),
+    linear-gradient(165deg, #ffd6ec 0%, #ff70b0 30%, var(--skeu-pink-deep) 68%, #a02860 100%);
   color: #fff;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+  box-shadow:
+    0 1px 0 rgba(255, 210, 240, 0.65) inset,
+    0 -1px 4px rgba(0, 0, 0, 0.12) inset,
+    0 6px 0 rgba(120, 15, 60, 0.5),
+    0 8px 20px rgba(0, 0, 0, 0.12),
+    0 6px 22px rgba(255, 100, 150, 0.08),
+    0 0 40px rgba(255, 185, 210, 0.07),
+    0 0 72px rgba(210, 175, 220, 0.045),
+    0 8px 16px rgba(0, 0, 0, 0.22);
+}
+
+.skeu-btn--primary:hover {
+  box-shadow:
+    0 1px 0 rgba(255, 210, 240, 0.75) inset,
+    0 -1px 4px rgba(0, 0, 0, 0.12) inset,
+    0 6px 0 rgba(120, 15, 60, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.11),
+    0 6px 28px rgba(255, 105, 155, 0.1),
+    0 0 48px rgba(255, 190, 215, 0.09),
+    0 0 88px rgba(200, 175, 235, 0.05),
+    0 8px 16px rgba(0, 0, 0, 0.22);
 }
 
 .skeu-btn--ghost {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.32), rgba(197, 225, 255, 0.12));
-  color: #0b1224;
+  position: relative;
+  border: 2.5px solid rgba(5, 10, 24, 0.52);
+  background:
+    radial-gradient(ellipse 72% 95% at 78% 12%, rgba(255, 255, 255, 0.28), transparent 55%),
+    radial-gradient(ellipse 80% 150% at 50% -22%, rgba(255, 255, 255, 0.62), transparent 48%),
+    repeating-linear-gradient(
+      -78deg,
+      transparent 0 5px,
+      rgba(255, 255, 255, 0.04) 5px 6px
+    ),
+    linear-gradient(
+      168deg,
+      #f2f8ff 0%,
+      #9ec8ff 22%,
+      #4580f0 52%,
+      #2a56c4 78%,
+      #182c7a 100%
+    );
+  -webkit-backdrop-filter: blur(8px) saturate(1.45);
+  backdrop-filter: blur(8px) saturate(1.45);
+  color: #fff;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.52),
+    0 0 14px rgba(180, 225, 255, 0.35);
+  box-shadow:
+    0 1px 0 rgba(220, 235, 255, 0.62) inset,
+    0 5px 12px rgba(255, 255, 255, 0.12) inset,
+    0 -1px 5px rgba(0, 0, 0, 0.18) inset,
+    0 6px 0 rgba(12, 28, 88, 0.58),
+    0 0 22px var(--skeu-glow-blue),
+    0 0 52px rgba(80, 160, 255, 0.18),
+    0 9px 18px rgba(0, 0, 0, 0.24);
+}
+
+.skeu-btn--ghost:hover {
+  filter: brightness(1.06) saturate(1.07);
+  box-shadow:
+    0 1px 0 rgba(235, 245, 255, 0.72) inset,
+    0 5px 14px rgba(255, 255, 255, 0.14) inset,
+    0 -1px 5px rgba(0, 0, 0, 0.16) inset,
+    0 6px 0 rgba(12, 28, 88, 0.52),
+    0 0 34px var(--skeu-glow-blue),
+    0 0 68px rgba(80, 160, 255, 0.22),
+    0 8px 16px rgba(0, 0, 0, 0.22);
+}
+
+.skeu-btn.skeu-btn--ghost:active {
+  box-shadow:
+    0 1px 0 rgba(200, 220, 255, 0.45) inset,
+    0 -1px 5px rgba(0, 0, 0, 0.2) inset,
+    0 2px 0 rgba(12, 28, 88, 0.55),
+    0 0 14px var(--skeu-glow-blue),
+    0 3px 10px rgba(0, 0, 0, 0.2);
 }
 
 .skeu-btn--dark {
-  background: linear-gradient(165deg, #2a3f7a 0%, #111a3d 100%);
+  background:
+    radial-gradient(ellipse 80% 140% at 50% -20%, rgba(100, 170, 255, 0.35), transparent 48%),
+    linear-gradient(165deg, #3050a0 0%, #152050 65%, #0a1230 100%);
   color: var(--skeu-text);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.65);
+  box-shadow:
+    0 1px 0 rgba(100, 160, 255, 0.35) inset,
+    0 -1px 4px rgba(0, 0, 0, 0.15) inset,
+    0 6px 0 rgba(5, 10, 30, 0.55),
+    0 0 14px rgba(80, 140, 255, 0.2),
+    0 8px 16px rgba(0, 0, 0, 0.25);
 }
 
 .skeu-btn--warn {
-  background: linear-gradient(165deg, #ffe8bf 0%, #fbbf24 45%, #b45309 100%);
-  color: #1a0f05;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  background:
+    radial-gradient(ellipse 80% 150% at 50% -20%, rgba(255, 255, 255, 0.65), transparent 48%),
+    linear-gradient(165deg, #fff0c0 0%, #ffcc33 35%, #f0a000 65%, #cc7700 100%);
+  color: #2a1500;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 1px 0 rgba(255, 245, 200, 0.75) inset,
+    0 -1px 4px rgba(0, 0, 0, 0.1) inset,
+    0 6px 0 rgba(150, 70, 0, 0.45),
+    0 0 18px var(--skeu-glow-amber),
+    0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.skeu-btn--warn:hover {
+  box-shadow:
+    0 1px 0 rgba(255, 245, 200, 0.8) inset,
+    0 -1px 4px rgba(0, 0, 0, 0.1) inset,
+    0 6px 0 rgba(150, 70, 0, 0.45),
+    0 0 28px var(--skeu-glow-amber),
+    0 0 56px rgba(255, 191, 36, 0.2),
+    0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 .skeu-btn--danger {
-  background: linear-gradient(165deg, #fecaca 0%, #ef4444 50%, #991b1b 100%);
+  background:
+    radial-gradient(ellipse 80% 140% at 50% -20%, rgba(255, 210, 210, 0.55), transparent 48%),
+    linear-gradient(165deg, #ffb0b0 0%, #ff4444 40%, #cc2020 75%, #881010 100%);
   color: #fff;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 1px 0 rgba(255, 200, 200, 0.55) inset,
+    0 6px 0 rgba(100, 10, 10, 0.4),
+    0 0 16px rgba(255, 70, 70, 0.35),
+    0 8px 16px rgba(0, 0, 0, 0.2);
 }
 
 .skeu-btn--sm {
-  padding: 0.28rem 0.7rem;
+  padding: 0.3rem 0.75rem;
   font-size: 0.95rem;
 }
 
@@ -314,17 +674,21 @@ select {
   border-radius: 999px;
 }
 
+/* --- INPUTS (embossed chrome field) --- */
 .skeu-input {
   width: 100%;
   border-radius: 1.25rem;
-  border: 2px solid rgba(11, 18, 36, 0.5);
+  border: 2.5px solid rgba(5, 10, 24, 0.5);
   padding: 0.65rem 1rem;
   font-size: 1.05rem;
   color: #0b1224;
-  background: linear-gradient(180deg, #f5f9ff 0%, #dbe7ff 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 30%),
+    linear-gradient(180deg, #f0f5ff 0%, #d4e2ff 50%, #bdd4f8 100%);
   box-shadow:
-    0 5px 14px rgba(0, 0, 0, 0.22) inset,
-    0 1px 0 rgba(255, 255, 255, 0.75) inset;
+    0 6px 18px rgba(0, 0, 0, 0.25) inset,
+    0 2px 6px rgba(0, 0, 0, 0.12) inset,
+    0 1px 0 rgba(255, 255, 255, 0.85);
   text-shadow: none;
   outline: none;
 }
@@ -332,14 +696,17 @@ select {
 .skeu-input:focus {
   border-color: rgba(255, 97, 166, 0.85);
   box-shadow:
-    0 0 0 3px rgba(255, 97, 166, 0.35),
-    0 5px 14px rgba(0, 0, 0, 0.22) inset;
+    0 0 0 4px rgba(255, 97, 166, 0.3),
+    0 0 20px rgba(255, 97, 166, 0.2),
+    0 6px 18px rgba(0, 0, 0, 0.25) inset,
+    0 2px 6px rgba(0, 0, 0, 0.12) inset;
 }
 
 .skeu-input::placeholder {
-  color: rgba(11, 18, 36, 0.45);
+  color: rgba(11, 18, 36, 0.38);
 }
 
+/* --- CUSTOM SELECT (chrome dropdown) --- */
 .skeu-select-trigger {
   display: flex;
   align-items: center;
@@ -347,14 +714,17 @@ select {
   gap: 0.55rem;
   width: 100%;
   border-radius: 1.25rem;
-  border: 2px solid rgba(11, 18, 36, 0.5);
+  border: 2.5px solid rgba(5, 10, 24, 0.5);
   padding: 0.65rem 1rem;
   font-size: 1.05rem;
   color: #0b1224;
-  background: linear-gradient(180deg, #f5f9ff 0%, #dbe7ff 100%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 30%),
+    linear-gradient(180deg, #f0f5ff 0%, #d4e2ff 50%, #bdd4f8 100%);
   box-shadow:
-    0 5px 14px rgba(0, 0, 0, 0.22) inset,
-    0 1px 0 rgba(255, 255, 255, 0.75) inset;
+    0 6px 18px rgba(0, 0, 0, 0.25) inset,
+    0 2px 6px rgba(0, 0, 0, 0.12) inset,
+    0 1px 0 rgba(255, 255, 255, 0.85);
   cursor: pointer;
   text-shadow: none;
   outline: none;
@@ -364,18 +734,19 @@ select {
 .skeu-select-trigger:focus-visible {
   border-color: rgba(255, 97, 166, 0.85);
   box-shadow:
-    0 0 0 3px rgba(255, 97, 166, 0.35),
-    0 5px 14px rgba(0, 0, 0, 0.22) inset;
+    0 0 0 4px rgba(255, 97, 166, 0.3),
+    0 0 20px rgba(255, 97, 166, 0.2),
+    0 6px 18px rgba(0, 0, 0, 0.25) inset;
 }
 
 .skeu-select-trigger__chev {
   width: 0.55rem;
   height: 0.55rem;
-  border-right: 2px solid #152445;
-  border-bottom: 2px solid #152445;
+  border-right: 2.5px solid #1a3060;
+  border-bottom: 2.5px solid #1a3060;
   transform: rotate(45deg) translate(-3px, -1px);
-  opacity: 0.88;
-  transition: transform 0.12s ease;
+  opacity: 0.85;
+  transition: transform 0.14s ease;
 }
 
 .skeu-select-trigger__chev--open {
@@ -386,18 +757,21 @@ select {
   position: absolute;
   left: 0;
   right: 0;
-  top: calc(100% + 0.35rem);
+  top: calc(100% + 0.4rem);
   z-index: 60;
-  max-height: min(50dvh, 18rem);
+  max-height: min(50dvh, 20rem);
   overflow-y: auto;
-  padding: 0.35rem;
-  border-radius: 1.35rem;
-  border: 2px solid rgba(11, 18, 36, 0.55);
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.94) 0%, rgba(197, 225, 255, 0.68) 100%);
+  padding: 0.4rem;
+  border-radius: 1.5rem;
+  border: 3px solid rgba(5, 10, 24, 0.55);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 35%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.95) 0%, rgba(210, 230, 255, 0.8) 50%, rgba(180, 215, 250, 0.7) 100%);
   box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.38),
-    0 5px 14px rgba(0, 0, 0, 0.14) inset,
-    0 1px 0 rgba(255, 255, 255, 0.78) inset;
+    0 18px 40px rgba(0, 0, 0, 0.4),
+    0 0 30px rgba(200, 160, 255, 0.15),
+    0 6px 18px rgba(0, 0, 0, 0.15) inset,
+    0 1px 0 rgba(255, 255, 255, 0.88) inset;
 }
 
 .skeu-select-option {
@@ -405,21 +779,24 @@ select {
   align-items: flex-start;
   gap: 0.45rem;
   width: 100%;
-  margin-bottom: 0.22rem;
+  margin-bottom: 0.28rem;
   text-align: left;
-  border-radius: 1.05rem;
-  border: 2px solid rgba(11, 18, 36, 0.18);
-  padding: 0.5rem 0.65rem;
+  border-radius: 1.15rem;
+  border: 2px solid rgba(5, 10, 24, 0.18);
+  padding: 0.55rem 0.7rem;
   font-size: 0.98rem;
   line-height: 1.35;
   color: #0b1224;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(197, 225, 255, 0.28));
+  background:
+    radial-gradient(ellipse 100% 180% at 50% -25%, rgba(255, 255, 255, 0.5), transparent 48%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(210, 230, 255, 0.3));
   box-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.07),
-    0 1px 0 rgba(255, 255, 255, 0.45) inset;
+    0 3px 0 rgba(0, 0, 0, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset;
   cursor: pointer;
   outline: none;
   font-family: inherit;
+  transition: filter 0.08s ease, box-shadow 0.15s ease;
 }
 
 .skeu-select-option:last-child {
@@ -427,29 +804,40 @@ select {
 }
 
 .skeu-select-option:hover {
-  filter: brightness(1.05);
-  border-color: rgba(11, 18, 36, 0.38);
+  filter: brightness(1.06);
+  border-color: rgba(5, 10, 24, 0.35);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.08),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 0 12px rgba(200, 160, 255, 0.15);
 }
 
 .skeu-select-option:focus-visible {
   border-color: rgba(255, 97, 166, 0.75);
-  box-shadow: 0 0 0 2px rgba(255, 97, 166, 0.35);
+  box-shadow: 0 0 0 3px rgba(255, 97, 166, 0.3);
 }
 
 .skeu-select-option--current {
-  border-color: rgba(199, 61, 126, 0.75);
-  background: linear-gradient(180deg, #ffe8f3 0%, #ffc8e4 42%, #ff9fcd 100%);
+  border-color: rgba(200, 50, 120, 0.65);
+  background:
+    radial-gradient(ellipse 90% 160% at 50% -20%, rgba(255, 255, 255, 0.55), transparent 45%),
+    linear-gradient(180deg, #ffe8f3 0%, #ffb0d5 35%, #ff80bb 68%, #e8509a 100%);
   box-shadow:
-    0 3px 0 rgba(163, 30, 90, 0.25),
-    0 1px 0 rgba(255, 255, 255, 0.55) inset;
+    0 4px 0 rgba(160, 30, 90, 0.28),
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 0 14px rgba(255, 97, 166, 0.3);
+  color: #3d0826;
 }
 
 .skeu-select-option--adaptive:not(.skeu-select-option--current) {
-  border-color: rgba(180, 83, 9, 0.42);
-  background: linear-gradient(180deg, rgba(255, 251, 235, 0.95), rgba(253, 230, 138, 0.45));
+  border-color: rgba(200, 100, 10, 0.42);
+  background:
+    radial-gradient(ellipse 90% 150% at 50% -20%, rgba(255, 255, 255, 0.45), transparent 42%),
+    linear-gradient(180deg, rgba(255, 252, 240, 0.96), rgba(255, 230, 140, 0.55));
   box-shadow:
-    0 2px 0 rgba(180, 83, 9, 0.15),
-    0 1px 0 rgba(255, 255, 255, 0.5) inset;
+    0 3px 0 rgba(180, 83, 9, 0.15),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 0 10px rgba(255, 191, 36, 0.2);
 }
 
 .skeu-select-option__mark {
@@ -462,7 +850,6 @@ select {
   color: rgba(11, 18, 36, 0.75);
 }
 
-/* Match sidebar field sizing (replaces per-select py/text utilities on native <select>) */
 .skeu-select--field .skeu-select-trigger {
   padding: 0.5rem 0.9rem;
   font-size: 0.875rem;
@@ -475,105 +862,185 @@ select {
   }
 }
 
+/* --- CHIPS (mini gel capsules) --- */
 .skeu-chip {
   border-radius: 999px;
-  border: 2px solid rgba(11, 18, 36, 0.28);
+  border: 2px solid rgba(5, 10, 24, 0.32);
   padding: 0.28rem 0.7rem;
   font-size: 1rem;
-  color: rgba(11, 18, 36, 0.8);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.65), rgba(197, 225, 255, 0.28));
-  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.12);
+  color: rgba(11, 18, 36, 0.85);
+  background:
+    radial-gradient(ellipse 100% 200% at 50% -30%, rgba(255, 255, 255, 0.72), transparent 48%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.9) 0%, rgba(230, 240, 255, 0.5) 55%, rgba(190, 220, 255, 0.35) 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.25) inset,
+    0 3px 0 rgba(0, 0, 0, 0.14),
+    0 4px 0 rgba(15, 30, 60, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.7) inset,
+    0 0 10px rgba(160, 200, 255, 0.15);
   text-shadow: none;
-  transition: transform 0.05s ease;
+  transition: transform 0.06s ease;
 }
 
 .skeu-chip:hover {
-  filter: brightness(1.05);
+  filter: brightness(1.08);
 }
 
 .skeu-chip:active {
-  transform: translateY(1px);
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.1),
+    0 1px 0 rgba(255, 255, 255, 0.5) inset;
 }
 
 .skeu-chip--active {
-  border-color: rgba(11, 18, 36, 0.5);
-  background: linear-gradient(180deg, var(--skeu-sky-deep) 0%, #1d4ed8 100%);
+  border-color: rgba(5, 10, 24, 0.5);
+  background:
+    radial-gradient(ellipse 80% 160% at 50% -20%, rgba(190, 225, 255, 0.5), transparent 48%),
+    linear-gradient(180deg, #80b8ff 0%, #3080f0 50%, #1d5ed8 100%);
   color: #fff;
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.5);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.35) inset,
-    0 3px 0 rgba(0, 0, 0, 0.2);
+    0 1px 0 rgba(160, 210, 255, 0.45) inset,
+    0 4px 0 rgba(10, 30, 80, 0.35),
+    0 0 14px rgba(80, 160, 255, 0.35);
 }
 
 .skeu-chip--amber {
-  border-color: rgba(120, 53, 15, 0.45);
-  background: linear-gradient(180deg, #fff7cf 0%, #fbbf24 55%, #b45309 100%);
-  color: #1a0f05;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+  border-color: rgba(150, 70, 10, 0.45);
+  background:
+    radial-gradient(ellipse 80% 150% at 50% -20%, rgba(255, 255, 255, 0.55), transparent 48%),
+    linear-gradient(180deg, #fff8d0 0%, #ffcc33 45%, #f0a000 78%, #cc7700 100%);
+  color: #2a1500;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+  box-shadow:
+    0 1px 0 rgba(255, 245, 200, 0.65) inset,
+    0 4px 0 rgba(150, 70, 0, 0.28),
+    0 0 12px var(--skeu-glow-amber);
 }
 
+/* --- PANELS (chrome / glass frame with halation) --- */
 .skeu-panel {
-  border-radius: 1.75rem;
-  border: 2px solid rgba(11, 18, 36, 0.35);
-  background: linear-gradient(165deg, rgba(255, 255, 255, 0.52) 0%, rgba(197, 225, 255, 0.25) 100%);
+  position: relative;
+  border-radius: 1.85rem;
+  border: none;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.2) 0%, transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, transparent 38%),
+    linear-gradient(165deg, rgba(255, 255, 255, 0.7) 0%, rgba(210, 230, 255, 0.4) 42%, rgba(175, 210, 250, 0.32) 100%);
   box-shadow:
-    0 10px 0 rgba(0, 0, 0, 0.12),
-    0 1px 0 rgba(255, 255, 255, 0.55) inset;
+    0 0 0 1px rgba(255, 255, 255, 0.38),
+    0 0 0 2px rgba(5, 15, 40, 0.4),
+    0 14px 0 rgba(0, 0, 0, 0.14),
+    0 2px 0 rgba(255, 255, 255, 0.72) inset,
+    0 10px 24px rgba(200, 220, 255, 0.18) inset,
+    0 0 32px rgba(160, 200, 255, 0.14),
+    0 0 72px rgba(195, 175, 240, 0.08),
+    0 18px 40px rgba(0, 0, 0, 0.18);
+}
+
+.skeu-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 8%;
+  right: 8%;
+  height: 40%;
+  border-radius: 0 0 50% 50%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.28), transparent 58%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.skeu-panel::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: calc(1.85rem - 5px);
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.04) inset;
+  opacity: 0.85;
 }
 
 .skeu-panel__inner {
+  position: relative;
+  z-index: 1;
   padding: 1.1rem 1.15rem 1.2rem;
 }
 
+/* --- ERROR --- */
 .skeu-error {
-  border-radius: 1.25rem;
-  border: 2px solid rgba(185, 28, 28, 0.65);
-  background: linear-gradient(180deg, #ffe4e6, #fecdd3);
+  border-radius: 1.35rem;
+  border: 2.5px solid rgba(220, 40, 40, 0.65);
+  background:
+    radial-gradient(ellipse 90% 150% at 50% -20%, rgba(255, 210, 210, 0.45), transparent 48%),
+    linear-gradient(180deg, #ffe8ea, #ffbcc4 50%, #ffa0aa 100%);
   color: #450a0a;
   text-shadow: none;
-  padding: 0.65rem 0.85rem;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.12);
+  padding: 0.7rem 0.9rem;
+  box-shadow:
+    0 5px 0 rgba(150, 15, 15, 0.18),
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 0 14px rgba(255, 70, 70, 0.25);
 }
 
+/* --- RANGE SLIDER (chrome groove + gel thumb) --- */
 .skeu-range {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 0.65rem;
+  height: 0.75rem;
   border-radius: 999px;
-  border: 2px solid rgba(11, 18, 36, 0.45);
-  background: linear-gradient(180deg, #0b1224 0%, #1e293b 100%);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35) inset;
+  border: 2.5px solid rgba(5, 10, 24, 0.5);
+  background:
+    linear-gradient(180deg, #080e22 0%, #1a2d55 50%, #1e3060 100%);
+  box-shadow:
+    0 5px 14px rgba(0, 0, 0, 0.4) inset,
+    0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .skeu-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.3rem;
+  height: 1.3rem;
   border-radius: 999px;
-  border: 2px solid rgba(11, 18, 36, 0.45);
-  background: radial-gradient(circle at 32% 30%, #ffffff, #dbeafe 55%, #93c5fd 100%);
+  border: 2.5px solid rgba(5, 10, 24, 0.45);
+  background:
+    radial-gradient(circle at 35% 30%, #ffffff 0%, #dbeafe 35%, #80b8ff 65%, #4a90d9 100%);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.85) inset,
-    0 4px 0 rgba(15, 23, 42, 0.35),
-    0 6px 10px rgba(0, 0, 0, 0.22);
+    0 1px 0 rgba(255, 255, 255, 0.92) inset,
+    0 -1px 3px rgba(0, 0, 0, 0.12) inset,
+    0 5px 0 rgba(10, 20, 50, 0.35),
+    0 0 10px var(--skeu-glow-blue),
+    0 7px 14px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
 }
 
 .skeu-range::-moz-range-thumb {
-  width: 1.15rem;
-  height: 1.15rem;
+  width: 1.3rem;
+  height: 1.3rem;
   border-radius: 999px;
-  border: 2px solid rgba(11, 18, 36, 0.45);
-  background: radial-gradient(circle at 32% 30%, #ffffff, #dbeafe 55%, #93c5fd 100%);
+  border: 2.5px solid rgba(5, 10, 24, 0.45);
+  background:
+    radial-gradient(circle at 35% 30%, #ffffff 0%, #dbeafe 35%, #80b8ff 65%, #4a90d9 100%);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.85) inset,
-    0 4px 0 rgba(15, 23, 42, 0.35);
+    0 1px 0 rgba(255, 255, 255, 0.92) inset,
+    0 -1px 3px rgba(0, 0, 0, 0.12) inset,
+    0 5px 0 rgba(10, 20, 50, 0.35),
+    0 0 10px var(--skeu-glow-blue);
+  cursor: pointer;
 }
 
+/* --- TIMELINE LANE / OVERLAY RANGE --- */
 .skeu-timeline-lane {
   position: absolute;
-  inset-block: 0;
+  z-index: 1;
+  top: 0;
+  bottom: 1.1rem;
   left: 1.1rem;
   right: 1.1rem;
 }
@@ -583,7 +1050,6 @@ select {
   right: 0;
 }
 
-/* Range overlaid on .skeu-timeline-track — one unified timeline */
 .skeu-range--timeline {
   -webkit-appearance: none;
   appearance: none;
@@ -612,15 +1078,20 @@ select {
 .skeu-range--timeline::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 0.55rem;
-  height: 2rem;
-  margin-top: calc((6px - 2rem) / 2);
+  width: 0.65rem;
+  height: 2.1rem;
+  margin-top: calc((6px - 2.1rem) / 2);
   border-radius: 999px;
-  border: 2px solid #78350e;
-  background: linear-gradient(180deg, #fde68a, #f59e0b);
+  border: 2.5px solid #7a4400;
+  background:
+    radial-gradient(ellipse 100% 200% at 50% -20%, rgba(255, 255, 255, 0.65), transparent 42%),
+    linear-gradient(180deg, #fff4c0, #ffcc33 35%, #f0a000 68%, #cc7700 100%);
   box-shadow:
-    0 0 0 3px rgba(251, 191, 36, 0.35),
-    0 4px 0 rgba(0, 0, 0, 0.35);
+    0 0 0 3px rgba(255, 200, 50, 0.45),
+    0 0 14px var(--skeu-glow-amber),
+    0 1px 0 rgba(255, 255, 255, 0.75) inset,
+    0 5px 0 rgba(120, 60, 0, 0.4);
+  cursor: pointer;
 }
 
 .skeu-range--timeline::-moz-range-track {
@@ -630,93 +1101,264 @@ select {
 }
 
 .skeu-range--timeline::-moz-range-thumb {
-  width: 0.55rem;
-  height: 2rem;
+  width: 0.65rem;
+  height: 2.1rem;
   border-radius: 999px;
-  border: 2px solid #78350e;
-  background: linear-gradient(180deg, #fde68a, #f59e0b);
+  border: 2.5px solid #7a4400;
+  background:
+    radial-gradient(ellipse 100% 200% at 50% -20%, rgba(255, 255, 255, 0.65), transparent 42%),
+    linear-gradient(180deg, #fff4c0, #ffcc33 35%, #f0a000 68%, #cc7700 100%);
   box-shadow:
-    0 0 0 3px rgba(251, 191, 36, 0.35),
-    0 4px 0 rgba(0, 0, 0, 0.35);
+    0 0 0 3px rgba(255, 200, 50, 0.45),
+    0 0 14px var(--skeu-glow-amber),
+    0 1px 0 rgba(255, 255, 255, 0.75) inset,
+    0 5px 0 rgba(120, 60, 0, 0.4);
+  cursor: pointer;
 }
 
+/* --- TIMELINE SCROLL (horizontal zoom rail) --- */
+.skeu-timeline-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 97, 166, 0.8) rgba(10, 20, 55, 0.35);
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, transparent 40%),
+    linear-gradient(180deg, rgba(50, 80, 160, 0.15), rgba(20, 35, 90, 0.1));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 5px 14px rgba(0, 0, 0, 0.08) inset,
+    0 0 0 1px rgba(5, 15, 40, 0.08);
+}
+
+.skeu-timeline-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.skeu-timeline-scroll::-webkit-scrollbar-track {
+  background: rgba(10, 20, 55, 0.35);
+  border-radius: 999px;
+  margin: 0 6px 2px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset;
+}
+
+.skeu-timeline-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  background:
+    radial-gradient(ellipse 100% 300% at 50% -30%, rgba(255, 255, 255, 0.55), transparent 38%),
+    linear-gradient(180deg, #ffd0e8 0%, var(--skeu-pink-mid) 55%, #b8306a 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45) inset,
+    0 -1px 2px rgba(0, 0, 0, 0.12) inset,
+    0 0 12px rgba(255, 120, 170, 0.16);
+}
+
+/* --- TIMELINE TRACK (deep groove with chrome rail) --- */
 .skeu-timeline-track {
   position: relative;
-  height: 2.65rem;
-  border-radius: 999px;
-  border: 2px solid rgba(11, 18, 36, 0.35);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.35), rgba(148, 197, 255, 0.22));
-  box-shadow: 0 5px 14px rgba(0, 0, 0, 0.18) inset;
+  height: 3.75rem;
+  min-width: 100%;
+  box-sizing: border-box;
+  border-radius: 1.2rem;
+  border: none;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 32%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(200, 225, 255, 0.34) 50%, rgba(170, 210, 250, 0.28) 100%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 0 0 2px rgba(5, 10, 30, 0.45),
+    0 8px 22px rgba(0, 0, 0, 0.22) inset,
+    0 2px 6px rgba(0, 0, 0, 0.1) inset,
+    0 2px 0 rgba(255, 255, 255, 0.55);
+}
+
+.skeu-timeline-track::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: calc(1.2rem - 3px);
+  pointer-events: none;
+  z-index: 0;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 10px 20px rgba(0, 0, 0, 0.06) inset;
 }
 
 .skeu-timeline-line {
   position: absolute;
   left: 1.1rem;
   right: 1.1rem;
-  top: 50%;
-  height: 5px;
+  top: 38%;
+  height: 6px;
   transform: translateY(-50%);
   border-radius: 999px;
-  background: linear-gradient(180deg, #0f172a 0%, #334155 100%);
-  box-shadow: 0 2px 0 rgba(255, 255, 255, 0.12) inset;
+  border: 1px solid rgba(5, 10, 24, 0.35);
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 3px,
+      rgba(255, 255, 255, 0.04) 3px 4px
+    ),
+    linear-gradient(180deg, #060c18 0%, #1a3358 38%, #243d68 55%, #152845 100%);
+  box-shadow:
+    0 2px 0 rgba(255, 255, 255, 0.12) inset,
+    0 4px 8px rgba(0, 0, 0, 0.45) inset,
+    0 0 6px rgba(80, 140, 255, 0.12);
 }
 
+/* --- TIMELINE RULER (time tick marks) --- */
+.skeu-timeline-ruler {
+  position: absolute;
+  z-index: 1;
+  left: 1.1rem;
+  right: 1.1rem;
+  bottom: 0;
+  height: 1.1rem;
+  pointer-events: none;
+  user-select: none;
+}
+
+.skeu-timeline-ruler__tick {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.skeu-timeline-ruler__line {
+  width: 1px;
+  height: 6px;
+  background: linear-gradient(180deg, rgba(11, 18, 36, 0.55), rgba(11, 18, 36, 0.28));
+  border-radius: 1px;
+  box-shadow: 0.5px 0 0 rgba(255, 255, 255, 0.35);
+}
+
+.skeu-timeline-ruler__label {
+  font-family: var(--font-vt323), monospace;
+  font-size: 0.58rem;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: rgba(11, 18, 36, 0.62);
+  white-space: nowrap;
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65),
+    0 -0.5px 0 rgba(0, 0, 0, 0.08);
+}
+
+/* --- STORYBOARD CARDS (3D chrome card with gloss) --- */
 .skeu-story-card {
-  border-radius: 1.15rem;
-  border: 2px solid rgba(11, 18, 36, 0.28);
-  padding: 0.45rem;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(197, 225, 255, 0.25));
-  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.1);
+  position: relative;
+  border-radius: 1.25rem;
+  border: none;
+  padding: 0.5rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.35) 0%, transparent 45%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(220, 235, 255, 0.42));
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.4),
+    0 0 0 2px rgba(5, 10, 24, 0.22),
+    0 7px 0 rgba(0, 0, 0, 0.1),
+    0 2px 0 rgba(255, 255, 255, 0.75) inset,
+    0 12px 20px rgba(100, 140, 200, 0.08) inset;
   text-shadow: none;
   color: #0b1224;
 }
 
 .skeu-story-card--active {
-  border-color: rgba(29, 78, 216, 0.85);
-  background: linear-gradient(180deg, #1d4ed8 0%, #172554 100%);
+  background:
+    radial-gradient(ellipse 90% 120% at 50% -15%, rgba(200, 230, 255, 0.45), transparent 50%),
+    linear-gradient(180deg, #6098ff 0%, #2870e8 42%, #1840a8 100%);
   color: var(--skeu-text);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.45);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(180, 220, 255, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(200, 230, 255, 0.55),
+    0 0 0 2px rgba(20, 50, 140, 0.65),
+    0 7px 0 rgba(10, 25, 70, 0.35),
+    0 2px 0 rgba(180, 220, 255, 0.45) inset,
+    0 0 22px rgba(80, 160, 255, 0.45),
+    0 16px 24px rgba(0, 40, 120, 0.25) inset;
 }
 
 .skeu-thumb {
-  border-radius: 0.85rem;
-  border: 2px solid rgba(11, 18, 36, 0.35);
+  border-radius: 0.9rem;
+  border: 2px solid rgba(5, 10, 24, 0.38);
   overflow: hidden;
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.12);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.2) inset,
+    0 5px 0 rgba(0, 0, 0, 0.14),
+    0 4px 12px rgba(0, 0, 0, 0.2) inset;
 }
 
+/* --- CHECKBOX --- */
 .skeu-check {
   accent-color: var(--skeu-pink-mid);
-  width: 1.1rem;
-  height: 1.1rem;
+  width: 1.15rem;
+  height: 1.15rem;
 }
 
+/* --- SCROLLBAR (chrome with pink gel) --- */
 .skeu-scroll {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 97, 166, 0.75) rgba(15, 23, 42, 0.35);
+  scrollbar-color: rgba(255, 97, 166, 0.8) rgba(10, 20, 55, 0.35);
 }
 
 .skeu-scroll::-webkit-scrollbar {
   width: 10px;
 }
+
 .skeu-scroll::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.35);
+  background: rgba(10, 20, 55, 0.35);
   border-radius: 999px;
   margin: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) inset;
 }
+
 .skeu-scroll::-webkit-scrollbar-thumb {
   border-radius: 999px;
   border: 2px solid rgba(0, 0, 0, 0.25);
-  background: linear-gradient(180deg, #ffd0e8 0%, var(--skeu-pink-mid) 100%);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) inset;
+  background:
+    radial-gradient(ellipse 100% 300% at 50% -30%, rgba(255, 255, 255, 0.55), transparent 38%),
+    linear-gradient(180deg, #ffd0e8 0%, var(--skeu-pink-mid) 55%, #b8306a 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.45) inset,
+    0 -1px 2px rgba(0, 0, 0, 0.12) inset,
+    0 0 12px rgba(255, 120, 170, 0.16);
 }
 
+/* --- NOISE + SCANLINES OVERLAY --- */
 .skeu-noise {
   pointer-events: none;
   position: fixed;
   inset: 0;
-  opacity: 0.07;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   z-index: 1;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.035) 0 1px,
+      transparent 1px 2px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.012) 0 1px,
+      transparent 1px 4px
+    ),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.09;
+  mix-blend-mode: overlay;
+}
+
+.skeu-noise::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 100% 60% at 50% 0%, rgba(255, 255, 255, 0.04), transparent 50%);
+  pointer-events: none;
 }

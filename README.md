@@ -1,58 +1,41 @@
-# Frame Extractor MVP
+# snipr
 
-Next.js MVP built from the PRD in `/Users/adi/Downloads/deep-research-report (1).md`.
+**Rip the video.** (Yes, that is the whole pitch. Marketing said we could not afford a second line.)
 
-## What ships now
+This is a Next.js app that looks like it time traveled from 2004, then robbed a candy factory, then decided to help you steal frames from video. Paste a post URL. Get a storyboard. Export a ZIP. Feel like a digital raccoon with a master’s degree.
 
-- Source intake for X URLs, direct video URLs, and local uploads
-- Storyboard-first editor with scrubbing, frame stepping, in/out markers, and capture tray
-- Client-side frame capture for uploaded videos
-- ZIP export with selected frames, `metadata.json`, and `captions.csv`
-- Server boundary for the X URL resolution path via `POST /api/resolve-source`
+## What actually works
 
-## Current product boundary
+- You feed it an X URL (or other sources the resolver knows about). It argues with syndication metadata until video variants fall out.
+- You scrub a timeline that thinks it is a physical object. You add frames. You remove frames. You pretend you are an editor even if your only credential is vibe.
+- Auto storyboard watches the whole clip like a judgmental friend and drops markers where things change. It may take a moment. The app now admits this instead of staring at you in silence.
+- ZIP export brings home images plus `metadata.json` and `captions.csv` so your future self knows what you were doing.
 
-The upload flow is still the most reliable MVP path today.
+## What to expect when things get weird
 
-The X URL flow now does a best-effort server-side resolve for public posts by reading X's public syndication metadata and extracting the exposed `video.twimg.com` variants. This avoids the official X API, but it is intentionally unstable and may break if X changes or removes that metadata surface.
+The public X path is best effort. If X moves a comma in their HTML, we might all cry together. HLS might need an MP4 sidekick for preview in some browsers. Uploads are still the dependable golden retriever of this project.
 
-The production backend boundary is still useful for:
+There is also a Chrome extension in `extension/` that does resolver stuff in popup form. Load it unpacked like it is 2010.
 
-- stronger media resolution guarantees
-- server-side FFmpeg extraction and storyboard generation
-- support for protected or login-gated posts
-- compliance checks and deletion handling
-
-## Key files
-
-- `src/components/frame-extractor-app.tsx`: main interactive app surface
-- `src/lib/frame-extractor.ts`: shared types, parsing helpers, and storyboard utilities
-- `src/app/api/resolve-source/route.ts`: API seam for X URL and direct URL source resolution
-
-## Run locally
+## Run it
 
 ```bash
 npm install
 npm run dev
 ```
 
-Then open [http://localhost:3000](http://localhost:3000).
+Open `http://localhost:3000`. Squint until the glossy plastic looks intentional.
 
-## Chrome extension
+## Where the bodies are buried
 
-There is also a plain unpacked Chrome extension in [`extension/manifest.json`](/Users/adi/Projects/x-frame-extractor/extension/manifest.json).
+- `src/components/frame-extractor-app.tsx` is the haunted amusement park
+- `src/lib/frame-extractor.ts` is types and storyboard math
+- `src/app/api/resolve-source/route.ts` talks to the outside world so you do not have to
 
-To install it:
+## Future you might build
 
-1. Open `chrome://extensions`
-2. Enable `Developer mode`
-3. Click `Load unpacked`
-4. Select the repo's [`extension`](/Users/adi/Projects/x-frame-extractor/extension) folder
+- Heavier server-side video brain (think FFmpeg shaped like a friend)
+- Saved projects so your clips survive a refresh
+- Whatever replaces “hope” as a strategy for public scraping
 
-The extension reads the current X status URL from your active tab or accepts a pasted tweet URL, resolves public playback variants through X's syndication metadata, and downloads MP4 variants directly with Chrome's downloads API.
-
-## Next implementation steps
-
-1. Add an FFmpeg worker for storyboard generation, exact timestamp capture, and quality controls.
-2. Persist projects and exports so the shareable-link flow from the PRD becomes real.
-3. Decide whether to keep the public X resolver or replace it with a more durable authenticated path later.
+If you ship something cool with snipr, the app cannot legally take credit, but it would like to.

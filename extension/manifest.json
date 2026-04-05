@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "X Video Resolver",
+  "name": "snipr",
   "version": "0.1.0",
-  "description": "Resolve public X video tweets into direct downloadable variants.",
+  "description": "Rip the video — resolve public X video posts into playable variants.",
   "action": {
-    "default_title": "X Video Resolver",
+    "default_title": "snipr",
     "default_popup": "popup.html"
   },
   "permissions": ["activeTab", "tabs", "downloads"],
