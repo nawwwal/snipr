@@ -71,6 +71,11 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(href);
 }
 
+async function dataUrlToBlob(dataUrl: string) {
+  const response = await fetch(dataUrl);
+  return response.blob();
+}
+
 async function loadImage(dataUrl: string) {
   return new Promise<HTMLImageElement>((resolve, reject) => {
     const image = new Image();
@@ -390,6 +395,7 @@ export function FrameExtractorApp() {
   const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
   const [statusNote, setStatusNote] = useState("Ready for the first source.");
   const [isExporting, setIsExporting] = useState(false);
+  const [isCopyingSelection, setIsCopyingSelection] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [storyboardPreviewUrls, setStoryboardPreviewUrls] = useState<Record<string, string>>({});
 
@@ -690,6 +696,72 @@ export function FrameExtractorApp() {
       setStatusNote(message);
     } finally {
       setIsExporting(false);
+    }
+  }
+
+  async function copySelectionToClipboard() {
+    if (!selectedFrames.length) {
+      setStatusNote("Select at least one frame before copying.");
+      return;
+    }
+
+    if (!("clipboard" in navigator) || typeof window.ClipboardItem === "undefined") {
+      setStatusNote("Clipboard image copy is not available in this browser.");
+      return;
+    }
+
+    setIsCopyingSelection(true);
+
+    try {
+      const pngItems = await Promise.all(
+        selectedFramesSorted.map(async (frame) => {
+          const converted = await convertDataUrl(frame.imageDataUrl, "png");
+          const blob = await dataUrlToBlob(converted);
+
+          return new window.ClipboardItem({
+            [blob.type]: blob,
+          });
+        }),
+      );
+
+      try {
+        await navigator.clipboard.write(pngItems);
+        setStatusNote(`Copied ${selectedFrames.length} selected frames to the clipboard.`);
+        return;
+      } catch {
+        const html = selectedFramesSorted
+          .map(
+            (frame) => `
+              <figure style="margin:0 0 16px 0;">
+                <img src="${frame.imageDataUrl}" alt="${frame.label}" style="max-width:100%;display:block;border-radius:12px;" />
+                <figcaption style="margin-top:6px;font:12px sans-serif;color:#334155;">
+                  ${frame.label} · ${formatTimestamp(frame.timestamp)}
+                </figcaption>
+              </figure>
+            `,
+          )
+          .join("");
+        const plainText = selectedFramesSorted
+          .map((frame) => `${frame.label} — ${formatTimestamp(frame.timestamp)}`)
+          .join("\n");
+
+        await navigator.clipboard.write([
+          new window.ClipboardItem({
+            "text/html": new Blob([html], { type: "text/html" }),
+            "text/plain": new Blob([plainText], { type: "text/plain" }),
+          }),
+        ]);
+
+        setStatusNote(
+          `Copied ${selectedFrames.length} selected frames as rich clipboard content.`,
+        );
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to copy selected frames to the clipboard.";
+      setStatusNote(message);
+    } finally {
+      setIsCopyingSelection(false);
     }
   }
 
@@ -1032,6 +1104,14 @@ export function FrameExtractorApp() {
                   className="skeu-btn skeu-btn--primary w-full py-2 disabled:pointer-events-none sm:py-2.5"
                 >
                   {isExporting ? "Packaging..." : "Download ZIP"}
+                </button>
+                <button
+                  type="button"
+                  onClick={copySelectionToClipboard}
+                  disabled={isCopyingSelection}
+                  className="skeu-btn skeu-btn--ghost w-full py-2 disabled:pointer-events-none sm:py-2.5"
+                >
+                  {isCopyingSelection ? "Copying..." : "Copy all selected"}
                 </button>
                 <button
                   type="button"
