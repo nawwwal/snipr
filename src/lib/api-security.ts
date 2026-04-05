@@ -115,9 +115,21 @@ export function enforceSameOriginBrowserRequest(request: Request) {
   }
 
   try {
-    const requestOrigin = new URL(request.url).origin;
+    const requestOrigin = new URL(origin).origin;
+    const allowedOrigins = new Set<string>([new URL(request.url).origin]);
+    const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+    const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+    const host = request.headers.get("host")?.split(",")[0]?.trim();
 
-    if (new URL(origin).origin !== requestOrigin) {
+    if (forwardedProto && forwardedHost) {
+      allowedOrigins.add(`${forwardedProto}://${forwardedHost}`);
+    }
+
+    if (host) {
+      allowedOrigins.add(`${forwardedProto ?? new URL(request.url).protocol.replace(":", "")}://${host}`);
+    }
+
+    if (!allowedOrigins.has(requestOrigin)) {
       return jsonError("Cross-origin browser requests are blocked.", 403);
     }
   } catch {
