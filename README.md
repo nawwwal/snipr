@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frame Extractor MVP
 
-## Getting Started
+Next.js MVP built from the PRD in `/Users/adi/Downloads/deep-research-report (1).md`.
 
-First, run the development server:
+## What ships now
+
+- Source intake for X URLs, direct video URLs, and local uploads
+- Storyboard-first editor with scrubbing, frame stepping, in/out markers, and capture tray
+- Client-side frame capture for uploaded videos
+- ZIP export with selected frames, `metadata.json`, and `captions.csv`
+- Server boundary for the X URL resolution path via `POST /api/resolve-source`
+
+## Current product boundary
+
+The upload flow is still the most reliable MVP path today.
+
+The X URL flow now does a best-effort server-side resolve for public posts by reading X's public syndication metadata and extracting the exposed `video.twimg.com` variants. This avoids the official X API, but it is intentionally unstable and may break if X changes or removes that metadata surface.
+
+The production backend boundary is still useful for:
+
+- stronger media resolution guarantees
+- server-side FFmpeg extraction and storyboard generation
+- support for protected or login-gated posts
+- compliance checks and deletion handling
+
+## Key files
+
+- `src/components/frame-extractor-app.tsx`: main interactive app surface
+- `src/lib/frame-extractor.ts`: shared types, parsing helpers, and storyboard utilities
+- `src/app/api/resolve-source/route.ts`: API seam for X URL and direct URL source resolution
+
+## Run locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Chrome extension
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+There is also a plain unpacked Chrome extension in [`extension/manifest.json`](/Users/adi/Projects/x-frame-extractor/extension/manifest.json).
 
-## Learn More
+To install it:
 
-To learn more about Next.js, take a look at the following resources:
+1. Open `chrome://extensions`
+2. Enable `Developer mode`
+3. Click `Load unpacked`
+4. Select the repo's [`extension`](/Users/adi/Projects/x-frame-extractor/extension) folder
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The extension reads the current X status URL from your active tab or accepts a pasted tweet URL, resolves public playback variants through X's syndication metadata, and downloads MP4 variants directly with Chrome's downloads API.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Next implementation steps
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Add an FFmpeg worker for storyboard generation, exact timestamp capture, and quality controls.
+2. Persist projects and exports so the shareable-link flow from the PRD becomes real.
+3. Decide whether to keep the public X resolver or replace it with a more durable authenticated path later.

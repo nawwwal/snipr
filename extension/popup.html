@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>X Video Resolver</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <p class="eyebrow">Personal-use resolver</p>
+        <h1>X video variants</h1>
+        <p class="lede">
+          Pull direct playback URLs from a public X post without the official X API.
+        </p>
+      </section>
+
+      <section class="panel">
+        <label class="label" for="tweetUrl">Tweet URL</label>
+        <textarea
+          id="tweetUrl"
+          rows="3"
+          placeholder="https://x.com/carterfmotion/status/2040579649722302896"
+        ></textarea>
+
+        <div class="actions">
+          <button id="useCurrentTab" class="secondary" type="button">Use current tab</button>
+          <button id="resolveButton" class="primary" type="button">Resolve</button>
+        </div>
+
+        <p id="statusNote" class="status">Ready.</p>
+      </section>
+
+      <section id="resultPanel" class="panel hidden">
+        <div class="result-header">
+          <img id="poster" class="poster hidden" alt="" />
+          <div>
+            <p id="resultTitle" class="result-title"></p>
+            <p id="resultSubtitle" class="result-subtitle"></p>
+          </div>
+        </div>
+
+        <div id="variantList" class="variant-list"></div>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

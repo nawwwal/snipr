@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "X Video Resolver",
+  "version": "0.1.0",
+  "description": "Resolve public X video tweets into direct downloadable variants.",
+  "action": {
+    "default_title": "X Video Resolver",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["activeTab", "tabs", "downloads"],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://cdn.syndication.twimg.com/*",
+    "https://video.twimg.com/*"
+  ]
+}
