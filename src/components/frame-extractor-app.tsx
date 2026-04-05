@@ -162,6 +162,47 @@ async function dataUrlToBlob(dataUrl: string) {
   return response.blob();
 }
 
+function sanitizeDownloadName(value: string) {
+  return value.replace(/[^\w-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+}
+
+function inferDownloadExtension(url: string | null | undefined, contentType: string | null | undefined) {
+  const normalizedContentType = contentType?.toLowerCase() ?? "";
+
+  if (normalizedContentType.includes("mpegurl") || normalizedContentType.includes("m3u8")) {
+    return "m3u8";
+  }
+  if (normalizedContentType.includes("webm")) {
+    return "webm";
+  }
+  if (normalizedContentType.includes("quicktime")) {
+    return "mov";
+  }
+  if (normalizedContentType.includes("mp4")) {
+    return "mp4";
+  }
+
+  if (url) {
+    try {
+      const pathname = new URL(url).pathname.toLowerCase();
+
+      if (pathname.endsWith(".webm")) {
+        return "webm";
+      }
+      if (pathname.endsWith(".mov")) {
+        return "mov";
+      }
+      if (pathname.endsWith(".m3u8")) {
+        return "m3u8";
+      }
+    } catch {
+      return "mp4";
+    }
+  }
+
+  return "mp4";
+}
+
 function encodeWavAudioBuffer(buffer: AudioBuffer) {
   const channels = Math.min(buffer.numberOfChannels, 2);
   const sampleRate = buffer.sampleRate;
@@ -996,6 +1037,7 @@ export function FrameExtractorApp() {
   const [isExporting, setIsExporting] = useState(false);
   const [isCopyingSelection, setIsCopyingSelection] = useState(false);
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false);
+  const [isDownloadingVideo, setIsDownloadingVideo] = useState(false);
   const [isAutoStoryboarding, setIsAutoStoryboarding] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [storyboardPreviewUrls, setStoryboardPreviewUrls] = useState<Record<string, string>>({});
@@ -1565,6 +1607,72 @@ export function FrameExtractorApp() {
       setStatusNote(message);
     } finally {
       setIsDownloadingAudio(false);
+    }
+  }
+
+  async function downloadVideoTrack() {
+    const downloadVariant =
+      activeVariant && !isHlsContentType(activeVariant.contentType)
+        ? activeVariant
+        : session?.variants.find((variant) => variant.contentType === "video/mp4") ??
+          activeVariant ??
+          previewVariant;
+    const rawDownloadUrl = downloadVariant?.url ?? session?.videoUrl ?? null;
+
+    if (!rawDownloadUrl) {
+      setStatusNote("No downloadable video source is available.");
+      return;
+    }
+
+    setIsDownloadingVideo(true);
+
+    try {
+      const filenameBase =
+        sanitizeDownloadName(session?.title || "video-download") || "video-download";
+      const extension = inferDownloadExtension(rawDownloadUrl, downloadVariant?.contentType);
+      const proxyDownloadUrl = createPreviewUrl(rawDownloadUrl);
+      let response: Response;
+
+      try {
+        response = await fetch(rawDownloadUrl);
+      } catch {
+        if (!proxyDownloadUrl || proxyDownloadUrl === rawDownloadUrl) {
+          throw new Error("Unable to fetch the selected video.");
+        }
+
+        response = await fetch(proxyDownloadUrl);
+      }
+
+      if (!response.ok) {
+        if (!proxyDownloadUrl || proxyDownloadUrl === rawDownloadUrl) {
+          throw new Error("Unable to fetch the selected video.");
+        }
+
+        const fallbackResponse = await fetch(proxyDownloadUrl);
+
+        if (!fallbackResponse.ok) {
+          throw new Error("Unable to fetch the selected video.");
+        }
+
+        response = fallbackResponse;
+      }
+
+      const blob = await response.blob();
+      downloadBlob(blob, `${filenameBase}.${extension}`);
+
+      if (activeVariant && isHlsContentType(activeVariant.contentType) && downloadVariant?.contentType === "video/mp4") {
+        setStatusNote(
+          "Downloaded the best MP4 fallback because HLS is not a single downloadable video file.",
+        );
+      } else {
+        setStatusNote(`Downloaded ${downloadVariant?.label ?? "video file"}.`);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to download the current video.";
+      setStatusNote(message);
+    } finally {
+      setIsDownloadingVideo(false);
     }
   }
 
@@ -2204,6 +2312,14 @@ export function FrameExtractorApp() {
                   className="skeu-btn skeu-btn--ghost w-full py-2 disabled:pointer-events-none sm:py-2.5"
                 >
                   {isCopyingSelection ? "Copying..." : "Copy storyboard"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void downloadVideoTrack()}
+                  disabled={isDownloadingVideo}
+                  className="skeu-btn skeu-btn--ghost w-full py-2 disabled:pointer-events-none sm:py-2.5"
+                >
+                  {isDownloadingVideo ? "Downloading video..." : "Download video"}
                 </button>
                 <button
                   type="button"
