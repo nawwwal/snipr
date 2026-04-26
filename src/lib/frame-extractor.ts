@@ -1,39 +1,20 @@
-export type SourceType = "x-url" | "direct-url" | "upload";
+import type {
+  SniprResolvedSource,
+  SniprSourceType,
+  SniprStoryboardFrame,
+  SniprStoryboardMode,
+  SniprVideoVariant,
+} from "@/lib/snipr-artifact";
 
-export type StoryboardMode = "Highlights" | "Scenes" | "Every 1s";
+export type SourceType = SniprSourceType;
 
-export type VideoVariant = {
-  id: string;
-  label: string;
-  bitrate: string;
-  resolution: string;
-  contentType: string;
-  url?: string;
-  recommended?: boolean;
-};
+export type StoryboardMode = SniprStoryboardMode;
 
-export type StoryboardFrame = {
-  id: string;
-  timestamp: number;
-  label: string;
-  note: string;
-  color: string;
-  kind: "scene" | "highlight" | "interval";
-};
+export type VideoVariant = SniprVideoVariant;
 
-export type ResolveSourceResponse = {
-  sourceType: SourceType;
-  normalizedInput: string;
-  title: string;
-  subtitle: string;
-  duration: number;
-  statusId?: string;
-  variants: VideoVariant[];
-  storyboard: StoryboardFrame[];
-  videoUrl: string | null;
-  previewMode: "local" | "server";
-  complianceNote: string;
-};
+export type StoryboardFrame = SniprStoryboardFrame;
+
+export type ResolveSourceResponse = SniprResolvedSource;
 
 const X_STATUS_PATTERN =
   /https?:\/\/(?:www\.)?(?:x|twitter)\.com\/(?:i\/status|[^/]+\/status)\/(\d+)/i;
