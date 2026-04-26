@@ -1,17 +1,39 @@
 {
   "manifest_version": 3,
   "name": "snipr",
-  "version": "0.1.0",
-  "description": "Rip the video. Keep the gold. Resolve public X video posts into playable variants.",
-  "action": {
-    "default_title": "snipr",
-    "default_popup": "popup.html"
+  "version": "0.2.0",
+  "description": "Full snipr editor from X/Twitter status pages — rip the video, keep the gold.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3GgN2xGjukMGJdqUQjcf9m6R1kR3hNK+jSOp8QulHO5MM1p69T4Z2l0aNALQsSD+Xc3rBG9ji070XyG1mY0DYtEUBmSAxEcNPQf+FJXo70ruGWKHGUgNzqp/n5BAg3lH/42lf4FqzEwCOEkk1jn46283GOeD4PoOshyu6SoaVx+3Bzqg5+KgVNQTHoDhlhiXjW2OsXC5Uv4orP+fE5zucD8MZ2l3LdkX57WFJ67xe4YKdntaYxg8+f0CNUtWaxCLoTSueb/dCNwk6b76C+PEnVO8zeTYuz2CctGYizdF7HAKer3ZREMGuvb+RTomiGeIsarMz4P8FZYmIt2Vp6xsOQIDAQAB",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
-  "permissions": ["activeTab", "tabs", "downloads"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Open snipr for this post",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "downloads",
+    "storage"
+  ],
   "host_permissions": [
     "https://x.com/*",
     "https://twitter.com/*",
     "https://cdn.syndication.twimg.com/*",
-    "https://video.twimg.com/*"
+    "https://video.twimg.com/*",
+    "https://pbs.twimg.com/*",
+    "https://video-ft.twimg.com/*",
+    "https://snipr.naw.al/*"
   ]
 }

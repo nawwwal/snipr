@@ -19,16 +19,20 @@ This is a Next.js app that looks like it time traveled from 2004, then robbed a 
 
 The public X path is best effort. If X moves a comma in their HTML, we might all cry together. HLS might need an MP4 sidekick for preview in some browsers. Uploads are still the dependable golden retriever of this project.
 
-There is also a Chrome extension in `extension/` that does resolver stuff in popup form. Load it unpacked like it is 2010.
+There is also a Chrome extension in `extension/` that opens the full editor from X/Twitter status pages.
 
 ## Run it
 
 ```bash
 npm install
 npm run dev
+npm run build:extension
 ```
 
 Open `http://localhost:3000`. Squint until the glossy plastic looks intentional.
+Then load `extension/` as an unpacked Chrome extension.
+
+If the extension should talk to a deployed backend instead of local dev, build it with `VITE_SNIPR_API_ORIGIN=https://your-snipr-host`.
 
 ## Where the bodies are buried
 

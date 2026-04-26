@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vite Chrome extension bundle (sources live under src/extension/)
+    "extension/**",
   ]),
 ]);
 
