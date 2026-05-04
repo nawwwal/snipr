@@ -6,6 +6,7 @@ import {
   enforceSameOriginBrowserRequest,
   getJsonBodySize,
   jsonError,
+  mergeSecurityHeaders,
 } from "@/lib/api-security";
 import {
   buildStoryboard,
@@ -15,12 +16,17 @@ import {
   type ResolveSourceResponse,
   type VideoVariant,
 } from "@/lib/frame-extractor";
+import {
+  SNIPR_ARTIFACT_SCHEMA_VERSION,
+  type SniprActiveTabContext,
+} from "@/lib/snipr-artifact";
 
 export const maxDuration = 10;
 
 type RequestBody = {
   input?: string;
   sourceType?: "x-url" | "direct-url";
+  activeTab?: SniprActiveTabContext;
 };
 
 type SyndicationVariant = {
@@ -206,6 +212,19 @@ function getTweetContext(tweet: SyndicationTweet | undefined) {
   };
 }
 
+function jsonHeaders(request: Request, rateLimitHeaders?: HeadersInit) {
+  const headers = createSecurityHeaders(rateLimitHeaders);
+  mergeSecurityHeaders(headers, request);
+  return headers;
+}
+
+export async function OPTIONS(request: Request) {
+  return new Response(null, {
+    status: 204,
+    headers: jsonHeaders(request),
+  });
+}
+
 export async function POST(request: Request) {
   const blockedOrigin = enforceSameOriginBrowserRequest(request);
 
@@ -220,39 +239,39 @@ export async function POST(request: Request) {
   });
 
   if (!rateLimit.allowed) {
-    return jsonError("Too many resolve requests. Try again in a minute.", 429, rateLimit.headers);
+    return jsonError("Too many resolve requests. Try again in a minute.", 429, rateLimit.headers, request);
   }
 
   const contentType = request.headers.get("content-type") ?? "";
 
   if (!contentType.toLowerCase().includes("application/json")) {
-    return jsonError("Requests must use application/json.", 415, rateLimit.headers);
+    return jsonError("Requests must use application/json.", 415, rateLimit.headers, request);
   }
 
   const bodySize = getJsonBodySize(request);
 
   if (bodySize !== null && bodySize > 4_096) {
-    return jsonError("Request body is too large.", 413, rateLimit.headers);
+    return jsonError("Request body is too large.", 413, rateLimit.headers, request);
   }
 
   const body = (await request.json()) as RequestBody;
   const normalizedInput = normalizeSourceInput(body.input ?? "");
 
   if (!normalizedInput) {
-    return jsonError("Enter an X URL or a direct MP4/WebM URL first.", 400, rateLimit.headers);
+    return jsonError("Enter an X URL or a direct MP4/WebM URL first.", 400, rateLimit.headers, request);
   }
 
   const inferredSourceType = body.sourceType ?? detectSourceType(normalizedInput);
 
   if (inferredSourceType === "upload") {
-    return jsonError("Uploads are handled directly in the browser for the MVP.", 400, rateLimit.headers);
+    return jsonError("Uploads are handled directly in the browser for the MVP.", 400, rateLimit.headers, request);
   }
 
   if (inferredSourceType === "x-url") {
     const statusId = extractStatusId(normalizedInput);
 
     if (!statusId) {
-      return jsonError("That does not look like a valid X status URL.", 400, rateLimit.headers);
+      return jsonError("That does not look like a valid X status URL.", 400, rateLimit.headers, request);
     }
 
     let syndicationResponse: Response;
@@ -273,7 +292,7 @@ export async function POST(request: Request) {
         error instanceof Error && error.name === "TimeoutError"
           ? "X metadata lookup timed out."
           : "X metadata lookup failed.";
-      return jsonError(message, 504, rateLimit.headers);
+      return jsonError(message, 504, rateLimit.headers, request);
     }
 
     if (!syndicationResponse.ok) {
@@ -283,6 +302,7 @@ export async function POST(request: Request) {
           : "X metadata lookup failed. This unofficial resolver may be temporarily blocked.",
         syndicationResponse.status === 404 ? 404 : 502,
         rateLimit.headers,
+        request,
       );
     }
 
@@ -294,6 +314,7 @@ export async function POST(request: Request) {
         "No playable video was found for that post. Protected posts, deleted posts, and image-only tweets will not resolve here.",
         422,
         rateLimit.headers,
+        request,
       );
     }
 
@@ -306,6 +327,7 @@ export async function POST(request: Request) {
         "The post resolved, but no downloadable playback variants were exposed.",
         422,
         rateLimit.headers,
+        request,
       );
     }
 
@@ -318,8 +340,10 @@ export async function POST(request: Request) {
       .slice(0, 120);
 
     const response: ResolveSourceResponse = {
+      schemaVersion: SNIPR_ARTIFACT_SCHEMA_VERSION,
       sourceType: "x-url",
       normalizedInput,
+      activeTab: body.activeTab,
       title,
       subtitle: subtitleText
         ? `@${context.authorHandle} · ${subtitleText}`
@@ -335,13 +359,15 @@ export async function POST(request: Request) {
     };
 
     return NextResponse.json(response, {
-      headers: createSecurityHeaders(rateLimit.headers),
+      headers: jsonHeaders(request, rateLimit.headers),
     });
   }
 
   const response: ResolveSourceResponse = {
+    schemaVersion: SNIPR_ARTIFACT_SCHEMA_VERSION,
     sourceType: "direct-url",
     normalizedInput,
+    activeTab: body.activeTab,
     title: "Direct video session",
     subtitle: "Remote preview is available when the host allows streaming and canvas extraction.",
     duration: 42.18,
@@ -364,6 +390,6 @@ export async function POST(request: Request) {
   };
 
   return NextResponse.json(response, {
-    headers: createSecurityHeaders(rateLimit.headers),
+    headers: jsonHeaders(request, rateLimit.headers),
   });
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import extensionConfig from "@/config/extension-config.mjs";
 
 type RateLimitOptions = {
   bucket: string;
@@ -36,12 +37,62 @@ export function createSecurityHeaders(init?: HeadersInit) {
   return headers;
 }
 
-export function jsonError(message: string, status: number, headers?: HeadersInit) {
+function normalizeExtensionOrigin(origin: string) {
+  return origin.trim().replace(/\/$/, "");
+}
+
+function getAllowedChromeExtensionOrigins() {
+  const configuredOrigins =
+    process.env.SNIPR_EXTENSION_ORIGINS
+      ?.split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean) ?? [];
+
+  return new Set(
+    [...extensionConfig.defaultAllowedExtensionOrigins, ...configuredOrigins].map(
+      normalizeExtensionOrigin,
+    ),
+  );
+}
+
+function isAllowedChromeExtensionOrigin(origin: string) {
+  return getAllowedChromeExtensionOrigins().has(normalizeExtensionOrigin(origin));
+}
+
+/** CORS for the snipr Chrome extension origin(s) we explicitly trust. */
+export function corsHeadersForChromeExtension(request: Request): HeadersInit {
+  const origin = request.headers.get("origin");
+
+  if (!origin?.startsWith("chrome-extension://") || !isAllowedChromeExtensionOrigin(origin)) {
+    return {};
+  }
+
+  return {
+    "access-control-allow-origin": origin,
+    "access-control-allow-methods": "GET, POST, HEAD, OPTIONS",
+    "access-control-allow-headers": "Content-Type, Range",
+    "access-control-max-age": "86400",
+    vary: "Origin",
+  };
+}
+
+export function mergeSecurityHeaders(base: Headers, request: Request) {
+  const extra = corsHeadersForChromeExtension(request);
+  for (const [key, value] of Object.entries(extra)) {
+    base.set(key, value);
+  }
+}
+
+export function jsonError(message: string, status: number, headers?: HeadersInit, request?: Request) {
+  const merged = createSecurityHeaders(headers);
+  if (request) {
+    mergeSecurityHeaders(merged, request);
+  }
   return NextResponse.json(
     { error: message },
     {
       status,
-      headers: createSecurityHeaders(headers),
+      headers: merged,
     },
   );
 }
@@ -114,6 +165,14 @@ export function enforceSameOriginBrowserRequest(request: Request) {
     return null;
   }
 
+  const normalizedRawOrigin = normalizeExtensionOrigin(origin);
+
+  if (normalizedRawOrigin.startsWith("chrome-extension://")) {
+    return isAllowedChromeExtensionOrigin(normalizedRawOrigin)
+      ? null
+      : jsonError("Cross-origin browser requests are blocked.", 403, undefined, request);
+  }
+
   try {
     const requestOrigin = new URL(origin).origin;
     const allowedOrigins = new Set<string>([new URL(request.url).origin]);
@@ -130,10 +189,10 @@ export function enforceSameOriginBrowserRequest(request: Request) {
     }
 
     if (!allowedOrigins.has(requestOrigin)) {
-      return jsonError("Cross-origin browser requests are blocked.", 403);
+      return jsonError("Cross-origin browser requests are blocked.", 403, undefined, request);
     }
   } catch {
-    return jsonError("Origin validation failed.", 403);
+    return jsonError("Origin validation failed.", 403, undefined, request);
   }
 
   return null;

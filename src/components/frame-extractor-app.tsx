@@ -6,6 +6,15 @@ import { flushSync } from "react-dom";
 
 import { SkeuSelect } from "@/components/skeu-select";
 import { isAllowedMediaProxyUrl } from "@/lib/media-hosts";
+import { isXStatusUrl } from "@/lib/x-status-url";
+import type { FrameExtractorLaunchConfig } from "@/lib/frame-extractor-launch";
+import {
+  createSniprExportMetadata,
+  createStoryboardAgentBundle,
+  renderStoryboardMarkdownSummary,
+  type SniprExportFormat,
+  type SniprExportFrame,
+} from "@/lib/snipr-artifact";
 import {
   buildStoryboard,
   buildStoryboardFromTimestamps,
@@ -22,7 +31,7 @@ type CapturedStoryboardFrame = StoryboardFrame & {
   imageDataUrl: string;
 };
 
-type ExportFormat = "png" | "jpeg" | "webp";
+type ExportFormat = SniprExportFormat;
 type QualityMode = "Fast" | "Balanced" | "Best";
 
 type SceneSample = {
@@ -126,27 +135,13 @@ function supportsNativeHlsPlayback() {
   );
 }
 
-function createPreviewUrl(url: string | null) {
-  if (!url) {
-    return null;
-  }
-
-  if (url.startsWith("blob:") || url.startsWith("data:")) {
-    return url;
-  }
-
-  try {
-    const parsedUrl = new URL(url);
-
-    if (isAllowedMediaProxyUrl(parsedUrl)) {
-      return `/api/media-proxy?url=${encodeURIComponent(url)}`;
-    }
-  } catch {
-    return url;
-  }
-
-  return url;
-}
+export type FrameExtractorAppProps = {
+  /** Empty string = same origin as the page (Next.js app). Set to hosted snipr origin for the extension. */
+  apiOrigin?: string;
+  /** When set, the editor can boot straight into resolve + storyboard for this URL. */
+  launch?: FrameExtractorLaunchConfig | null;
+  showTestTweetButton?: boolean;
+};
 
 function downloadBlob(blob: Blob, filename: string) {
   const href = URL.createObjectURL(blob);
@@ -1018,7 +1013,38 @@ async function createContactSheetDataUrl(frames: CapturedStoryboardFrame[]) {
   return canvas.toDataURL("image/png");
 }
 
-export function FrameExtractorApp() {
+export function FrameExtractorApp({
+  apiOrigin = "",
+  launch = null,
+  showTestTweetButton = true,
+}: FrameExtractorAppProps = {}) {
+  const apiBase = (apiOrigin ?? "").replace(/\/$/, "");
+
+  const createPreviewUrl = useCallback(
+    (url: string | null) => {
+      if (!url) {
+        return null;
+      }
+
+      if (url.startsWith("blob:") || url.startsWith("data:")) {
+        return url;
+      }
+
+      try {
+        const parsedUrl = new URL(url);
+
+        if (isAllowedMediaProxyUrl(parsedUrl)) {
+          return `${apiBase}/api/media-proxy?url=${encodeURIComponent(url)}`;
+        }
+      } catch {
+        return url;
+      }
+
+      return url;
+    },
+    [apiBase],
+  );
+
   const [sourceInput, setSourceInput] = useState("");
   const [session, setSession] = useState<ResolveSourceResponse | null>(null);
   const [appState, setAppState] = useState<"idle" | "loading" | "ready" | "error">("idle");
@@ -1036,6 +1062,7 @@ export function FrameExtractorApp() {
   const [statusNote, setStatusNote] = useState("Ready for the first source.");
   const [isExporting, setIsExporting] = useState(false);
   const [isCopyingSelection, setIsCopyingSelection] = useState(false);
+  const [isCopyingSummary, setIsCopyingSummary] = useState(false);
   const [isDownloadingAudio, setIsDownloadingAudio] = useState(false);
   const [isDownloadingVideo, setIsDownloadingVideo] = useState(false);
   const [isAutoStoryboarding, setIsAutoStoryboarding] = useState(false);
@@ -1046,6 +1073,7 @@ export function FrameExtractorApp() {
   const isAutoStoryboardingRef = useRef(false);
   /** Prevents duplicate full-video scan right after openSource (effect also watches URL). */
   const skipNextStoryboardEffectRef = useRef(false);
+  const launchOnceRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const timelineScrollRef = useRef<HTMLDivElement>(null);
   const timelineTrackRef = useRef<HTMLDivElement>(null);
@@ -1066,6 +1094,7 @@ export function FrameExtractorApp() {
     autoStoryboardSelection: async () => {},
     exportSelection: async () => {},
     copySelectionToClipboard: async () => {},
+    copyMarkdownSummary: async () => {},
     removeFrame: (() => {}) as (id: string) => void,
     scrollFilmstripToFrame: (() => {}) as (id: string) => void,
     goToNewTweet: () => {},
@@ -1167,14 +1196,21 @@ export function FrameExtractorApp() {
   );
 
   useEffect(() => {
+    if (!session || appState !== "ready") {
+      return;
+    }
     if (skipNextStoryboardEffectRef.current) {
       skipNextStoryboardEffectRef.current = false;
       return;
     }
     void runStoryboardDetection();
-  }, [runStoryboardDetection]);
+  }, [runStoryboardDetection, session, appState]);
 
   useEffect(() => {
+    if (!session || appState !== "ready") {
+      return;
+    }
+
     let cancelled = false;
 
     async function generatePreviews() {
@@ -1201,7 +1237,7 @@ export function FrameExtractorApp() {
     return () => {
       cancelled = true;
     };
-  }, [activeVideoUrl, storyboardFrames]);
+  }, [activeVideoUrl, storyboardFrames, session, appState]);
 
   function scrubTo(nextTime: number) {
     const safeTime = Math.min(Math.max(nextTime, 0), duration || 0);
@@ -1414,6 +1450,9 @@ export function FrameExtractorApp() {
     setAppState("idle");
     setErrorMessage(null);
     setIsPlaying(false);
+    if (typeof window !== "undefined" && window.location.search) {
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }
 
   async function addCurrentFrame() {
@@ -1450,6 +1489,24 @@ export function FrameExtractorApp() {
       return;
     }
     await runStoryboardDetection();
+  }
+
+  function buildAgentBundle(frames: SniprExportFrame[]) {
+    return createStoryboardAgentBundle({
+      exportedAt: new Date().toISOString(),
+      source: {
+        type: session?.sourceType ?? "x-url",
+        url: session?.normalizedInput ?? sourceInput,
+        title: session?.title,
+        subtitle: session?.subtitle,
+        duration: session?.duration,
+        statusId: session?.statusId,
+      },
+      selectedVariantId: selectedVariant || null,
+      launchSource: launch?.source,
+      activeTab: session?.activeTab ?? launch?.activeTab,
+      frames,
+    });
   }
 
   async function exportSelection() {
@@ -1489,21 +1546,31 @@ export function FrameExtractorApp() {
         ),
       ].join("\n");
 
+      const bundle = buildAgentBundle(metadata);
+
       zip.file(
         "metadata.json",
         JSON.stringify(
-          {
+          createSniprExportMetadata({
             projectName,
             sourceType: session?.sourceType ?? "x-url",
             normalizedInput: session?.normalizedInput ?? sourceInput,
             exportedAt: new Date().toISOString(),
             format: exportFormat,
+            title: session?.title,
+            subtitle: session?.subtitle,
+            duration: session?.duration,
+            statusId: session?.statusId,
+            selectedVariantId: selectedVariant || null,
+            launchSource: launch?.source,
+            activeTab: session?.activeTab ?? launch?.activeTab,
             frames: metadata,
-          },
+          }),
           null,
           2,
         ),
       );
+      zip.file("summary.md", renderStoryboardMarkdownSummary(bundle));
       zip.file("captions.csv", csv);
 
       const frameFolder = zip.folder("frames");
@@ -1527,6 +1594,40 @@ export function FrameExtractorApp() {
       setStatusNote(message);
     } finally {
       setIsExporting(false);
+    }
+  }
+
+  async function copyMarkdownSummary() {
+    if (!storyboardFrames.length) {
+      setStatusNote("Add storyboard frames before copying the handoff summary.");
+      return;
+    }
+
+    if (!navigator.clipboard?.writeText) {
+      setStatusNote("Clipboard text copy is not available in this browser.");
+      return;
+    }
+
+    setIsCopyingSummary(true);
+
+    try {
+      const frames = storyboardFramesSorted.map((frame, index) => ({
+        id: frame.id,
+        index: index + 1,
+        label: frame.label,
+        timestamp: frame.timestamp,
+        timestampLabel: formatTimestamp(frame.timestamp),
+        filename: `${slugifyTimestamp(frame.timestamp)}-${frame.id}.png`,
+        note: frame.note,
+      }));
+      await navigator.clipboard.writeText(renderStoryboardMarkdownSummary(buildAgentBundle(frames)));
+      setStatusNote(`Copied ${frames.length} frame notes as an agent handoff summary.`);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to copy the handoff summary.";
+      setStatusNote(message);
+    } finally {
+      setIsCopyingSummary(false);
     }
   }
 
@@ -1676,10 +1777,11 @@ export function FrameExtractorApp() {
     }
   }
 
-  async function openSource() {
+  async function resolveFromInput(input: string) {
     setErrorMessage(null);
+    const trimmed = input.trim();
 
-    if (!sourceInput.trim()) {
+    if (!trimmed) {
       setAppState("error");
       setErrorMessage("Enter a source URL first.");
       return;
@@ -1689,13 +1791,14 @@ export function FrameExtractorApp() {
     setStatusNote("Resolving public X metadata and playable variants...");
 
     try {
-      const response = await fetch("/api/resolve-source", {
+      const response = await fetch(`${apiBase}/api/resolve-source`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          input: sourceInput,
+          input: trimmed,
+          activeTab: launch?.activeTab,
         }),
       });
 
@@ -1731,6 +1834,34 @@ export function FrameExtractorApp() {
     }
   }
 
+  async function openSource() {
+    await resolveFromInput(sourceInput);
+  }
+
+  useEffect(() => {
+    if (!launch?.autoload || !launch.sourceUrl?.trim()) {
+      return;
+    }
+
+    if (launchOnceRef.current) {
+      return;
+    }
+
+    launchOnceRef.current = true;
+    const url = launch.sourceUrl.trim();
+
+    if (!isXStatusUrl(url)) {
+      setAppState("error");
+      setErrorMessage("Open snipr from an X or Twitter post URL (…/status/…).");
+      return;
+    }
+
+    setSourceInput(url);
+    void resolveFromInput(url);
+    // Launch runs once; resolver closes over the initial runStoryboardDetection — sufficient for boot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only react to launch identity
+  }, [launch]);
+
   keyboardActionsRef.current = {
     togglePlayback,
     addCurrentFrame,
@@ -1740,6 +1871,7 @@ export function FrameExtractorApp() {
     autoStoryboardSelection,
     exportSelection,
     copySelectionToClipboard,
+    copyMarkdownSummary,
     removeFrame,
     scrollFilmstripToFrame,
     goToNewTweet,
@@ -2035,18 +2167,20 @@ export function FrameExtractorApp() {
                   </div>
                 ) : null}
 
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSourceInput("https://x.com/carterfmotion/status/2040579649722302896");
-                    }}
-                    disabled={appState === "loading"}
-                    className="skeu-btn skeu-btn--ghost skeu-btn--sm disabled:pointer-events-none disabled:opacity-55"
-                  >
-                    Use test tweet
-                  </button>
-                </div>
+                {showTestTweetButton ? (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSourceInput("https://x.com/carterfmotion/status/2040579649722302896");
+                      }}
+                      disabled={appState === "loading"}
+                      className="skeu-btn skeu-btn--ghost skeu-btn--sm disabled:pointer-events-none disabled:opacity-55"
+                    >
+                      Use test tweet
+                    </button>
+                  </div>
+                ) : null}
 
                 {errorMessage ? (
                   <div className="skeu-error w-full max-w-2xl text-left text-sm leading-snug sm:text-base">
@@ -2291,6 +2425,14 @@ export function FrameExtractorApp() {
                 </button>
                 <button
                   type="button"
+                  onClick={copyMarkdownSummary}
+                  disabled={isCopyingSummary}
+                  className="skeu-btn skeu-btn--ghost w-full py-2 disabled:pointer-events-none sm:py-2.5"
+                >
+                  {isCopyingSummary ? "Copying summary..." : "Copy agent summary"}
+                </button>
+                <button
+                  type="button"
                   onClick={() => void downloadVideoTrack()}
                   disabled={isDownloadingVideo}
                   className="skeu-btn skeu-btn--ghost w-full py-2 disabled:pointer-events-none sm:py-2.5"
@@ -2519,7 +2661,7 @@ export function FrameExtractorApp() {
                           <button
                             type="button"
                             onClick={() => removeFrame(frame.id)}
-                            className="skeu-btn skeu-btn--icon skeu-btn--sm absolute right-1.5 bottom-1.5 !h-7 !w-7 !text-xs opacity-0 transition-opacity hover:!opacity-100 focus-visible:!opacity-100 [article:hover_&]:opacity-80"
+                            className="skeu-btn skeu-btn--icon skeu-btn--sm absolute top-1.5 right-1.5 !h-7 !w-7 !text-xs opacity-0 transition-opacity hover:!opacity-100 focus-visible:!opacity-100 [article:hover_&]:opacity-80"
                             aria-label={`Remove ${frame.label}`}
                           >
                             ×

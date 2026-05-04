@@ -36,6 +36,15 @@ yarn-error.log*
 # vercel
 .vercel
 
+# Chrome extension bundle (keep extension/manifest.json; run `npm run build:extension`)
+/extension/assets/
+/extension/chunks/
+/extension/editor.html
+/extension/editor.js
+/extension/unsupported.html
+/extension/unsupported.js
+/extension/background.js
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -3,10 +3,16 @@ import {
   createSecurityHeaders,
   enforceSameOriginBrowserRequest,
   jsonError,
+  mergeSecurityHeaders,
 } from "@/lib/api-security";
 import { isAllowedMediaProxyUrl } from "@/lib/media-hosts";
 
 export const maxDuration = 25;
+
+function withCors(request: Request, headers: Headers) {
+  mergeSecurityHeaders(headers, request);
+  return headers;
+}
 
 function getUpstreamUrl(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -43,7 +49,7 @@ async function proxyRequest(request: Request, method: "GET" | "HEAD") {
   });
 
   if (!rateLimit.allowed) {
-    return jsonError("Too many proxy requests. Try again in a minute.", 429, rateLimit.headers);
+    return jsonError("Too many proxy requests. Try again in a minute.", 429, rateLimit.headers, request);
   }
 
   const upstreamUrl = getUpstreamUrl(request);
@@ -53,6 +59,7 @@ async function proxyRequest(request: Request, method: "GET" | "HEAD") {
       "Only approved X/Twitter media hosts can be proxied here.",
       403,
       rateLimit.headers,
+      request,
     );
   }
 
@@ -78,7 +85,7 @@ async function proxyRequest(request: Request, method: "GET" | "HEAD") {
       error instanceof Error && error.name === "TimeoutError"
         ? "Upstream media request timed out."
         : "Upstream media request failed.";
-    return jsonError(message, 504, rateLimit.headers);
+    return jsonError(message, 504, rateLimit.headers, request);
   }
 
   if (!upstreamResponse.ok && upstreamResponse.status !== 206) {
@@ -86,10 +93,12 @@ async function proxyRequest(request: Request, method: "GET" | "HEAD") {
       `Upstream media request failed with ${upstreamResponse.status}.`,
       upstreamResponse.status,
       rateLimit.headers,
+      request,
     );
   }
 
   const responseHeaders = createSecurityHeaders(rateLimit.headers);
+  withCors(request, responseHeaders);
   const passthroughHeaders = [
     "accept-ranges",
     "cache-control",
@@ -108,11 +117,21 @@ async function proxyRequest(request: Request, method: "GET" | "HEAD") {
     }
   }
 
-  responseHeaders.set("cross-origin-resource-policy", "same-origin");
+  // Allow <video crossOrigin> from the snipr extension page (different origin than the API host).
+  responseHeaders.set("cross-origin-resource-policy", "cross-origin");
 
   return new Response(method === "HEAD" ? null : upstreamResponse.body, {
     status: upstreamResponse.status,
     headers: responseHeaders,
+  });
+}
+
+export async function OPTIONS(request: Request) {
+  const headers = createSecurityHeaders();
+  withCors(request, headers);
+  return new Response(null, {
+    status: 204,
+    headers,
   });
 }
 
